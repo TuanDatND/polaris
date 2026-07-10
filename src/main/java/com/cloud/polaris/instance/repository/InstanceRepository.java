@@ -8,8 +8,8 @@ import java.util.UUID;
 
 public interface InstanceRepository extends JpaRepository<Instance, UUID> {
 
-    boolean existsByTenantIdAndName(UUID tenantId, String name);
+    boolean existsByTenant_IdAndName(UUID tenantId, String name);
 
-    Optional<Instance> findByIdAndTenantId(UUID id, UUID tenantId);
+    Optional<Instance> findByIdAndTenant_Id(UUID id, UUID tenantId);
 }
 

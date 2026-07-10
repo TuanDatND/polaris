@@ -2,17 +2,19 @@ package com.cloud.polaris.instance.domain;
 
 
 import com.cloud.polaris.common.exception.IllegalStateTransitionException;
+import org.springframework.stereotype.Component;
 
 import java.util.Map;
 import java.util.Set;
 
+@Component
 public class InstanceStateMachine {
 
     private static final Map<CurrentState, Set<CurrentState>> ALLOWED_TRANSITIONS = Map.of(
             CurrentState.PENDING, Set.of(CurrentState.PROVISIONING, CurrentState.FAILED),
             CurrentState.PROVISIONING, Set.of(CurrentState.RUNNING, CurrentState.FAILED),
             CurrentState.STARTING, Set.of(CurrentState.RUNNING, CurrentState.FAILED),
-            CurrentState.RUNNING, Set.of(CurrentState.STOPPING, CurrentState.DELETED, CurrentState.FAILED),
+            CurrentState.RUNNING, Set.of(CurrentState.STOPPING, CurrentState.DELETING, CurrentState.FAILED),
             CurrentState.STOPPING, Set.of(CurrentState.STOPPED, CurrentState.FAILED),
             CurrentState.STOPPED, Set.of(CurrentState.STARTING, CurrentState.DELETING),
             CurrentState.DELETING, Set.of(CurrentState.DELETED, CurrentState.FAILED),
@@ -24,10 +26,10 @@ public class InstanceStateMachine {
         return ALLOWED_TRANSITIONS.getOrDefault(from, Set.of()).contains(to);
     }
 
-    public void transition(Instance instance, CurrentState to){
+    public void transition(Instance instance, CurrentState to) {
         CurrentState from = instance.getCurrentState();
 
-        if(!canTransition(from, to)){
+        if (!canTransition(from, to)) {
             throw new IllegalStateTransitionException(from, to, instance.getId());
         }
 

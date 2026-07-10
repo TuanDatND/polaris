@@ -2,16 +2,15 @@ package com.cloud.polaris.instance.domain;
 
 import com.cloud.polaris.tenant.domain.Tenant;
 import jakarta.persistence.*;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 import java.time.Instant;
 import java.util.UUID;
 
-@NoArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Getter
-@Setter
 @Entity
 @Table(name = "instances")
 public class Instance {
@@ -58,4 +57,18 @@ public class Instance {
 
     @Column(name = "updated_at", insertable = false, updatable = false)
     private Instant updatedAt;
+
+    public static Instance createPending(Tenant tenant, String name, String imageName, Integer cpuAllocated, Integer ramMb) {
+        Instance instance = new Instance();
+
+        instance.tenant = tenant;
+        instance.name = name;
+        instance.imageName = imageName;
+        instance.cpuAllocated = cpuAllocated;
+        instance.ramMb = ramMb;
+
+        instance.currentState = CurrentState.PENDING;
+        instance.desiredState = DesiredState.RUNNING;
+        return instance;
+    }
 }

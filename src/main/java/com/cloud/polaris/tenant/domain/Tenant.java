@@ -1,8 +1,11 @@
 package com.cloud.polaris.tenant.domain;
 
+import com.cloud.polaris.common.exception.QuotaExceededException;
 import com.cloud.polaris.instance.domain.Instance;
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.time.Instant;
 import java.util.List;
@@ -51,4 +54,36 @@ public class Tenant {
 
     @OneToMany(mappedBy = "tenant", fetch = FetchType.LAZY)
     private List<Instance> instances;
+
+    //Anemic Domain Model (Mô hình domain "thiếu máu" - Entity chỉ có getter/setter, service làm hết việc) sang Rich Domain Model (Mô hình domain "giàu có" - Entity tự mang trong mình logic của chính nó). Đây là xương sống của tư duy DDD (Domain-Driven Design).
+    public static Tenant create(String username, Integer quotaCpu, Integer quotaRamMb, Integer quotaInstanceCount) {
+        Tenant tenant = new Tenant();
+
+        tenant.username = username;
+        tenant.quotaCpu = (quotaCpu != null) ? quotaCpu : 10;
+        tenant.quotaRamMb = (quotaRamMb != null) ? quotaRamMb : 8192;
+        tenant.quotaInstanceCount = (quotaInstanceCount != null) ? quotaInstanceCount : 5;
+
+        tenant.allocatedCpu = 0;
+        tenant.allocatedRamMb = 0;
+        tenant.allocatedInstanceCount = 0;
+        return tenant;
+    }
+
+    public boolean canAllocate(int cpu, int ramMb) {
+        return allocatedCpu + cpu <= quotaCpu
+                && allocatedRamMb + ramMb <= quotaRamMb
+                && allocatedInstanceCount + 1 <= quotaInstanceCount;
+    }
+
+    public void reserve(int cpu, int ramMb) {
+        if (!canAllocate(cpu, ramMb)) {
+            throw QuotaExceededException.forRequest(cpu, ramMb, quotaCpu - allocatedCpu, quotaRamMb - allocatedRamMb, quotaInstanceCount - allocatedInstanceCount);
+        }
+
+        allocatedCpu += cpu;
+        allocatedRamMb += ramMb;
+        allocatedInstanceCount += 1;
+    }
+
 }
