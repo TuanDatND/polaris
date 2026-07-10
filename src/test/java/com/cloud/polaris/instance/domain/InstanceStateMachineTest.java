@@ -57,7 +57,10 @@ class InstanceStateMachineTest {
             "STOPPED, STARTING, true",
             "DELETED, RUNNING, false",
             "FAILED, RUNNING, false",
-            "PENDING, DELETED, false"
+            "PENDING, DELETED, false",
+            "RUNNING, DELETING, true",
+            "RUNNING, DELETED, false",
+            "DELETING, DELETED, true"
     })
     @DisplayName("Kiểm tra hàng loạt kịch bản chuyển trạng thái")
     void canTransition_BulkTest(CurrentState from, CurrentState to, boolean expectedResult) {

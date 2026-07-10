@@ -11,8 +11,9 @@ import org.springframework.data.repository.query.Param;
 import java.util.Optional;
 import java.util.UUID;
 
-public interface  TenantRepository extends JpaRepository<Tenant, UUID> {
+public interface TenantRepository extends JpaRepository<Tenant, UUID> {
 
+    //lock for update quota...
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT t FROM Tenant t WHERE t.id = :id")
     Optional<Tenant> findByIdForUpdate(@Param("id") UUID id);
