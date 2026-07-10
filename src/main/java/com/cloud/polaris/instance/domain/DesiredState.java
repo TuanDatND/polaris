@@ -1,4 +1,7 @@
 package com.cloud.polaris.instance.domain;
 
-public class DesiredState {
+public enum DesiredState {
+     RUNNING,
+     STOPPED,
+     DELETED
 }

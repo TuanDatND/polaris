@@ -1,4 +1,13 @@
 package com.cloud.polaris.instance.domain;
 
-public class CurrentState {
+public enum CurrentState {
+    PENDING,
+    PROVISIONING,
+    STARTING,
+    RUNNING,
+    STOPPING,
+    STOPPED,
+    DELETING,
+    DELETED,
+    FAILED
 }

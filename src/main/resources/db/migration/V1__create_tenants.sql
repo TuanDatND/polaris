@@ -32,4 +32,4 @@ CREATE TABLE tenants (
 
     CONSTRAINT chk_tenant_allocated_instance_valid
         CHECK (allocated_instance_count >= 0 AND allocated_instance_count <= quota_instance_count)
-)
+);
