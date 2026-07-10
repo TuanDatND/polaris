@@ -7,7 +7,9 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface InstanceRepository extends JpaRepository<Instance, UUID> {
+
     boolean existsByTenantIdAndName(UUID tenantId, String name);
+
     Optional<Instance> findByIdAndTenantId(UUID id, UUID tenantId);
 }
 
