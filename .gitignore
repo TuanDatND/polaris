@@ -40,3 +40,5 @@ out/
 
 codex-config/
 AGENTS.md
+docs/*
+!docs/AI_PROJECT_CONTEXT.md
