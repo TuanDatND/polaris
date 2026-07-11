@@ -33,6 +33,6 @@ public class InstanceStateMachine {
             throw new IllegalStateTransitionException(from, to, instance.getId());
         }
 
-        instance.setCurrentState(to);
+        instance.changeCurrentState(to);
     }
 }

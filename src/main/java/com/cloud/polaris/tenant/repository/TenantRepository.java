@@ -1,6 +1,5 @@
 package com.cloud.polaris.tenant.repository;
 
-import com.cloud.polaris.instance.domain.Instance;
 import com.cloud.polaris.tenant.domain.Tenant;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;

@@ -28,7 +28,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-validation")
 
     // Security
-    implementation("org.springframework.boot:spring-boot-starter-security")
+//    implementation("org.springframework.boot:spring-boot-starter-security")
 
     // Database
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
@@ -50,9 +50,9 @@ dependencies {
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.9")
 
     // JWT
-    implementation("io.jsonwebtoken:jjwt-api:${property("jjwtVersion")}")
-    runtimeOnly("io.jsonwebtoken:jjwt-impl:${property("jjwtVersion")}")
-    runtimeOnly("io.jsonwebtoken:jjwt-jackson:${property("jjwtVersion")}")
+//    implementation("io.jsonwebtoken:jjwt-api:${property("jjwtVersion")}")
+//    runtimeOnly("io.jsonwebtoken:jjwt-impl:${property("jjwtVersion")}")
+//    runtimeOnly("io.jsonwebtoken:jjwt-jackson:${property("jjwtVersion")}")
 
     // MapStruct
     implementation("org.mapstruct:mapstruct:${property("mapstructVersion")}")
