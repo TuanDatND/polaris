@@ -9,7 +9,7 @@ public class QuotaExceededException extends RuntimeException {
         return new QuotaExceededException(
                 "Quota exceeded: requested cpu=" + requestedCpu
                         + ", ramMb=" + requestedRamMb
-                        + ", availableCpu=" + availableCpu
+                        + ". availableCpu=" + availableCpu
                         + ", availableRamMb=" + availableRamMb
                         + ", availableInstanceCount=" + availableInstanceCount
         );

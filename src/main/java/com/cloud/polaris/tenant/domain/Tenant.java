@@ -3,6 +3,7 @@ package com.cloud.polaris.tenant.domain;
 import com.cloud.polaris.common.exception.QuotaExceededException;
 import com.cloud.polaris.instance.domain.Instance;
 import jakarta.persistence.*;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -12,7 +13,7 @@ import java.util.List;
 import java.util.UUID;
 
 @Entity
-@NoArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Getter
 @Setter
 @Table(name = "tenants")
@@ -78,7 +79,9 @@ public class Tenant {
 
     public void reserve(int cpu, int ramMb) {
         if (!canAllocate(cpu, ramMb)) {
-            throw QuotaExceededException.forRequest(cpu, ramMb, quotaCpu - allocatedCpu, quotaRamMb - allocatedRamMb, quotaInstanceCount - allocatedInstanceCount);
+            throw QuotaExceededException.forRequest(cpu, ramMb,
+                    quotaCpu - allocatedCpu,
+                    quotaRamMb - allocatedRamMb, quotaInstanceCount - allocatedInstanceCount);
         }
 
         allocatedCpu += cpu;

@@ -50,8 +50,8 @@ public class GlobalExceptionHandler {
         ));
     }
 
-    @ExceptionHandler(DuplicateTenantUsernameException.class)
-    public ResponseEntity<ErrorResponse> handleDuplicateResource(DuplicateTenantUsernameException e) {
+    @ExceptionHandler(DuplicateResourceException.class)
+    public ResponseEntity<ErrorResponse> handleDuplicateResource(DuplicateResourceException e) {
         return ResponseEntity
                 .status(HttpStatus.CONFLICT)
                 .body(ErrorResponse.of(

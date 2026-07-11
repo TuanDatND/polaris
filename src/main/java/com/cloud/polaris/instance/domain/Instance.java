@@ -71,4 +71,8 @@ public class Instance {
         instance.desiredState = DesiredState.RUNNING;
         return instance;
     }
+
+    void changeCurrentState(CurrentState currentState) {
+        this.currentState = currentState;
+    }
 }
