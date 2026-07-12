@@ -1,19 +1,20 @@
-CREATE TABLE tenants (
-    id                          UUID PRIMARY KEY,
-    username                    TEXT UNIQUE NOT NULL,
+CREATE TABLE tenants
+(
+    id                       UUID PRIMARY KEY,
+    username                 TEXT UNIQUE NOT NULL,
 
-    quota_cpu                   INT NOT NULL DEFAULT 10,
-    quota_ram_mb                INT NOT NULL DEFAULT 8192,
-    quota_instance_count        INT NOT NULL DEFAULT 5,
+    quota_cpu                INT         NOT NULL DEFAULT 10,
+    quota_ram_mb             INT         NOT NULL DEFAULT 8192,
+    quota_instance_count     INT         NOT NULL DEFAULT 5,
 
-    allocated_cpu               INT NOT NULL DEFAULT 0,
-    allocated_ram_mb            INT NOT NULL DEFAULT 0,
-    allocated_instance_count    INT NOT NULL  DEFAULT 0,
+    allocated_cpu            INT         NOT NULL DEFAULT 0,
+    allocated_ram_mb         INT         NOT NULL DEFAULT 0,
+    allocated_instance_count INT         NOT NULL DEFAULT 0,
 
-    version                     BIGINT NOT NULL DEFAULT 0,
+    version                  BIGINT      NOT NULL DEFAULT 0,
 
-    created_at                  TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at                  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    created_at               TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at               TIMESTAMPTZ NOT NULL DEFAULT now(),
 
     CONSTRAINT chk_tenant_quota_cpu_positive
         CHECK ( quota_cpu > 0 ),

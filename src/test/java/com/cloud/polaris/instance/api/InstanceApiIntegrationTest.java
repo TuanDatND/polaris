@@ -32,7 +32,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Testcontainers
 @SpringBootTest
 @AutoConfigureMockMvc(addFilters = false)
-@Disabled("Temporarily disabled because local Docker/Testcontainers setup is unstable on Windows")
 class InstanceApiIntegrationTest {
 
     @Container
