@@ -16,7 +16,7 @@ CREATE TABLE tasks
     locked_at       TIMESTAMPTZ,
     locked_by       TEXT,
 
-    idempotency_key TEXT UNIQUE,
+    idempotency_key TEXT,
 
     payload         JSONB,
     last_error      TEXT,
@@ -46,7 +46,10 @@ CREATE TABLE tasks
         CHECK (attempts >= 0 AND attempts <= max_attempts),
 
     CONSTRAINT chk_task_max_attempts_positive
-        CHECK (max_attempts > 0)
+        CHECK (max_attempts > 0),
+
+    CONSTRAINT uq_tasks_tenant_idempotency
+        UNIQUE (tenant_id, idempotency_key)
 );
 
 CREATE INDEX idx_tasks_poll
