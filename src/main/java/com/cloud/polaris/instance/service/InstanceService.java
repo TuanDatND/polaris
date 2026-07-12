@@ -4,6 +4,7 @@ import com.cloud.polaris.common.exception.DuplicateResourceException;
 import com.cloud.polaris.common.exception.ResourceNotFoundException;
 import com.cloud.polaris.instance.api.CreateInstanceRequest;
 import com.cloud.polaris.instance.api.InstanceResponse;
+import com.cloud.polaris.instance.domain.CurrentState;
 import com.cloud.polaris.instance.domain.Instance;
 import com.cloud.polaris.instance.repository.InstanceRepository;
 import com.cloud.polaris.tenant.domain.Tenant;
@@ -27,7 +28,7 @@ public class InstanceService {
         Tenant tenant = tenantRepository.findByIdForUpdate(tenantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Tenant not found: " + tenantId));
 
-        if (instanceRepository.existsByTenant_IdAndName(tenantId, request.name())) {
+        if (instanceRepository.existsByTenant_IdAndNameAndCurrentStateNot(tenantId, request.name(),CurrentState.DELETED)) {
             throw new DuplicateResourceException("Instance name already exists in tenant: " + request.name());
         }
 

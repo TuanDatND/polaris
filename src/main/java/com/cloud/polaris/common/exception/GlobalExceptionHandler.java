@@ -1,6 +1,7 @@
 package com.cloud.polaris.common.exception;
 
 import com.cloud.polaris.common.api.ErrorResponse;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -70,6 +71,17 @@ public class GlobalExceptionHandler {
                         e.getMessage(),
                         HttpStatus.NOT_FOUND.value()
                 ));
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(DataIntegrityViolationException e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                ErrorResponse.of(
+                        "DUPLICATE_RESOURCE",
+                        "Instance name already exists",
+                        HttpStatus.CONFLICT.value()
+                )
+        );
     }
 
     @ExceptionHandler(Exception.class)
