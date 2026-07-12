@@ -7,8 +7,12 @@ import com.cloud.polaris.instance.api.InstanceResponse;
 import com.cloud.polaris.instance.domain.CurrentState;
 import com.cloud.polaris.instance.domain.Instance;
 import com.cloud.polaris.instance.repository.InstanceRepository;
+import com.cloud.polaris.task.domain.Task;
+import com.cloud.polaris.task.repository.TaskRepository;
 import com.cloud.polaris.tenant.domain.Tenant;
 import com.cloud.polaris.tenant.repository.TenantRepository;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,6 +25,7 @@ public class InstanceService {
 
     private final InstanceRepository instanceRepository;
     private final TenantRepository tenantRepository;
+    private final TaskRepository taskRepository;
 
     @Transactional
     public InstanceResponse createInstance(UUID tenantId, CreateInstanceRequest request) {
@@ -33,8 +38,23 @@ public class InstanceService {
         }
 
         tenant.reserve(request.cpu(), request.ramMb());
-        Instance instance = Instance.createPending(tenant, request.name(), request.imageName(), request.cpu(), request.ramMb());
-        return InstanceResponse.from(instanceRepository.save(instance));
+        Instance instance = instanceRepository.save(
+                Instance.createPending(
+                        tenant,
+                        request.name(),
+                        request.imageName(),
+                        request.cpu(),
+                        request.ramMb()));
+
+        ObjectNode payload = JsonNodeFactory.instance.objectNode()
+                .put("name", instance.getName())
+                .put("imageName", instance.getImageName())
+                .put("cpuAllocated", instance.getCpuAllocated())
+                .put("ramMb", instance.getRamMb());
+
+        Task task = Task.createInstanceTask(tenant, instance, payload);
+        taskRepository.save(task);
+        return InstanceResponse.from(instance);
     }
 
     @Transactional(readOnly = true)

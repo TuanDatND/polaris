@@ -1,4 +1,9 @@
 package com.cloud.polaris.task.domain;
 
-public class TaskStatus {
+public enum TaskStatus {
+    QUEUED,
+    RUNNING,
+    SUCCESS,
+    FAILED,
+    CANCELLED,
 }
