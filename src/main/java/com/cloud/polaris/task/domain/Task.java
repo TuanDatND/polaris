@@ -81,20 +81,23 @@ public class Task {
         task.attempts = 0;
         task.maxAttempts = 5;
         task.availableAt = Instant.now();
-        task.idempotencyKey = "create-instance:" + instance.getId();;
+        task.idempotencyKey = "create-instance:" + instance.getId();
+        ;
         task.payload = payload;
 
         return task;
     }
 
-    public void claim(String workerId, Instant now){
-       if(status != TaskStatus.QUEUED){
-           throw new IllegalStateException("Task is not queued");
-       }
+    public void claim(String workerId, Instant now) {
+        if (status != TaskStatus.QUEUED) {
+            throw new IllegalStateException("Task is not queued");
+        }
 
-       status = TaskStatus.RUNNING;
-       attempts++;
-       lockedAt = now;
-       lockedBy = workerId;
+        status = TaskStatus.RUNNING;
+        attempts++;
+        lockedAt = now;
+        lockedBy = workerId;
     }
+
+
 }
