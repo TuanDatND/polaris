@@ -2,6 +2,7 @@ package com.cloud.polaris.task.service;
 
 import com.cloud.polaris.instance.domain.Instance;
 import com.cloud.polaris.instance.repository.InstanceRepository;
+import com.cloud.polaris.task.domain.ClaimedTask;
 import com.cloud.polaris.task.domain.Task;
 import com.cloud.polaris.task.domain.TaskStatus;
 import com.cloud.polaris.task.repository.TaskRepository;
@@ -108,7 +109,8 @@ class TaskClaimConcurrencyIntegrationTest {
         return CompletableFuture.runAsync(() -> {
             try {
                 assertThat(startGate.await(5, TimeUnit.SECONDS)).isTrue();
-                claims.addAll(taskService.claimTasks(10, workerId).stream().map(Task::getId).toList());
+                claims.addAll(taskService.claimTasks(10, workerId).stream().map(ClaimedTask::taskId).toList());
+
             } catch (InterruptedException exception) {
                 Thread.currentThread().interrupt();
                 throw new IllegalStateException("Worker was interrupted", exception);

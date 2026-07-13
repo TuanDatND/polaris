@@ -93,6 +93,10 @@ public class Task {
             throw new IllegalStateException("Task is not queued");
         }
 
+        if (attempts >= maxAttempts) {
+            throw new IllegalStateException("Task has exhausted retry attempts");
+        }
+
         status = TaskStatus.RUNNING;
         attempts++;
         lockedAt = now;

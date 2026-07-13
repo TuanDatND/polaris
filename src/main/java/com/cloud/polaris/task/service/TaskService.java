@@ -1,5 +1,6 @@
 package com.cloud.polaris.task.service;
 
+import com.cloud.polaris.task.domain.ClaimedTask;
 import com.cloud.polaris.task.domain.Task;
 import com.cloud.polaris.task.repository.TaskRepository;
 import jakarta.transaction.Transactional;
@@ -15,12 +16,13 @@ public class TaskService {
     private final TaskRepository taskRepository;
 
     @Transactional
-    public List<Task> claimTasks(int limit, String workerId) {
+    public List<ClaimedTask> claimTasks(int limit, String workerId) {
         List<Task> tasks = taskRepository.findQueuedTasksForUpdate(limit);
         Instant now = Instant.now();
 
         tasks.forEach(task -> task.claim(workerId, now));
-
-        return tasks;
+        return tasks.stream()
+                .map(ClaimedTask::from)
+                .toList();
     }
 }
