@@ -75,4 +75,14 @@ public class Instance {
     void changeCurrentState(CurrentState currentState) {
         this.currentState = currentState;
     }
+
+
+    //for provider
+    public void attachContainer(String containerId) {
+        this.containerId = containerId;
+    }
+
+    public void recordFailure(String reason) {
+        this.failureReason = reason;
+    }
 }

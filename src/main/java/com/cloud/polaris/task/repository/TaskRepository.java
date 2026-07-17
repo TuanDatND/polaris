@@ -15,6 +15,7 @@ public interface TaskRepository extends JpaRepository<Task, UUID> {
             FROM tasks
             WHERE status = 'QUEUED'
               AND available_at <= now()
+              AND attempts < max_attempts
             ORDER BY created_at
             LIMIT :limit
             FOR UPDATE SKIP LOCKED 

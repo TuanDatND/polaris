@@ -20,7 +20,7 @@ repositories {
 
 extra["jjwtVersion"] = "0.12.6"
 extra["mapstructVersion"] = "1.6.3"
-extra["dockerJavaVersion"] = "3.4.0"
+extra["dockerJavaVersion"] = "3.7.1"
 
 dependencies {
     // Spring Core

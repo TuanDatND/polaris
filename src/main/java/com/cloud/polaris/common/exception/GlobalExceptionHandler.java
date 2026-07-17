@@ -77,8 +77,8 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(DataIntegrityViolationException e) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(
                 ErrorResponse.of(
-                        "DUPLICATE_RESOURCE_DB",
-                        "Instance name already exists",
+                        "DATABASE_RESOURCE_ERROR",
+                        "Database error",
                         HttpStatus.CONFLICT.value()
                 )
         );
