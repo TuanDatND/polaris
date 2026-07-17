@@ -6,6 +6,7 @@ import com.cloud.polaris.instance.api.CreateInstanceRequest;
 import com.cloud.polaris.instance.api.InstanceResponse;
 import com.cloud.polaris.instance.domain.CurrentState;
 import com.cloud.polaris.instance.domain.Instance;
+import com.cloud.polaris.instance.domain.InstanceStateMachine;
 import com.cloud.polaris.instance.repository.InstanceRepository;
 import com.cloud.polaris.task.domain.Task;
 import com.cloud.polaris.task.repository.TaskRepository;
@@ -26,6 +27,7 @@ public class InstanceService {
     private final InstanceRepository instanceRepository;
     private final TenantRepository tenantRepository;
     private final TaskRepository taskRepository;
+    private final InstanceStateMachine stateMachine;
 
     @Transactional
     public InstanceResponse createInstance(UUID tenantId, CreateInstanceRequest request) {
@@ -61,5 +63,19 @@ public class InstanceService {
     public InstanceResponse getInstance(UUID tenantId, UUID instanceId) {
         Instance instance = instanceRepository.findByIdAndTenant_Id(instanceId, tenantId).orElseThrow(() -> new ResourceNotFoundException("Instance not found: " + instanceId));
         return InstanceResponse.from(instance);
+    }
+
+    @Transactional
+    public void markProvisioning(UUID instanceId) {
+        Instance instance = instanceRepository.findById(instanceId).orElseThrow(() -> new ResourceNotFoundException("Instance not found: " + instanceId));
+
+        stateMachine.transition(instance, CurrentState.PROVISIONING);
+    }
+
+    @Transactional
+    public void markRunning(UUID instanceId) {
+        Instance instance =  instanceRepository.findById(instanceId).orElseThrow(() -> new ResourceNotFoundException("Instance not found: " + instanceId));
+
+        stateMachine.transition(instance, CurrentState.RUNNING);
     }
 }

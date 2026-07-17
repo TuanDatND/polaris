@@ -103,5 +103,37 @@ public class Task {
         lockedBy = workerId;
     }
 
+    public void markSuccess() {
+        if(status != TaskStatus.RUNNING) {
+            throw new IllegalStateException("Task is not running");
+        }
+
+        status = TaskStatus.SUCCESS;
+        lockedAt = null;
+        lockedBy = null;
+    }
+
+    public void retry(Instant nextAvailableAt, String error) {
+        if (status != TaskStatus.RUNNING) {
+            throw new IllegalStateException("Task is not running");
+        }
+
+        status = TaskStatus.QUEUED;
+        availableAt = nextAvailableAt;
+        lastError = error;
+        lockedAt = null;
+        lockedBy = null;
+    }
+
+    public void markFailed(String error) {
+        if (status != TaskStatus.RUNNING) {
+            throw new IllegalStateException("Task is not running");
+        }
+
+        status = TaskStatus.FAILED;
+        lastError = error;
+        lockedAt = null;
+        lockedBy = null;
+    }
 
 }
