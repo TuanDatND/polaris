@@ -4,6 +4,8 @@ CREATE TABLE instances
 
     tenant_id      UUID        NOT NULL REFERENCES tenants (id),
 
+    quota_released BOOLEAN     NOT NULL DEFAULT FALSE,
+
     name           TEXT        NOT NULL,
     image_name     TEXT        NOT NULL,
 

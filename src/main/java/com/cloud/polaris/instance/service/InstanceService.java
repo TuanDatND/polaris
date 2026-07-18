@@ -12,6 +12,7 @@ import com.cloud.polaris.task.domain.Task;
 import com.cloud.polaris.task.repository.TaskRepository;
 import com.cloud.polaris.tenant.domain.Tenant;
 import com.cloud.polaris.tenant.repository.TenantRepository;
+import com.cloud.polaris.tenant.service.QuotaAdmissionService;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +29,7 @@ public class InstanceService {
     private final TenantRepository tenantRepository;
     private final TaskRepository taskRepository;
     private final InstanceStateMachine stateMachine;
+    private final QuotaAdmissionService quotaAdmissionService;
 
     @Transactional
     public InstanceResponse createInstance(UUID tenantId, CreateInstanceRequest request) {
@@ -69,13 +71,48 @@ public class InstanceService {
     public void markProvisioning(UUID instanceId) {
         Instance instance = instanceRepository.findById(instanceId).orElseThrow(() -> new ResourceNotFoundException("Instance not found: " + instanceId));
 
-        stateMachine.transition(instance, CurrentState.PROVISIONING);
+        stateMachine.transitionIfNecessary(
+                instance,
+                CurrentState.PROVISIONING
+        );
     }
 
     @Transactional
-    public void markRunning(UUID instanceId) {
+    public void markRunning(UUID instanceId, String containerId) {
         Instance instance =  instanceRepository.findById(instanceId).orElseThrow(() -> new ResourceNotFoundException("Instance not found: " + instanceId));
 
-        stateMachine.transition(instance, CurrentState.RUNNING);
+        stateMachine.transitionIfNecessary(instance, CurrentState.RUNNING);
+        instance.attachContainer(containerId);
+    }
+
+    @Transactional
+    public void markFailed(UUID instanceId, String reason) {
+        Instance instance = instanceRepository.findById(instanceId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Instance not found"));
+
+        if (instance.getCurrentState() == CurrentState.FAILED) {
+            return; // Idempotent, tránh release quota hai lần
+        }
+
+        stateMachine.transitionIfNecessary(
+                instance,
+                CurrentState.FAILED
+        );
+
+        instance.recordFailure(reason);
+    }
+
+    @Transactional
+    public void releaseQuota(UUID instanceId) {
+
+       Instance instance = instanceRepository.findByIdForUpdate(instanceId).orElseThrow(() -> new ResourceNotFoundException("Instance not found"));
+       Tenant tenant = tenantRepository.findByIdForUpdate(instance.getTenant().getId()).orElseThrow(() -> new ResourceNotFoundException("Tenant not found"));
+
+       if (!instance.releaseQuota()){
+           return ;
+       }
+
+       tenant.release(instance.getCpuAllocated(), instance.getRamMb());
     }
 }

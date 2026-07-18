@@ -48,6 +48,9 @@ public class Instance {
     @Column(name = "failure_reason")
     private String failureReason;
 
+    @Column( name = "quota_released", nullable = false)
+    private boolean quotaReleased;
+
     @Version
     @Column(name = "version", nullable = false)
     private Long version;
@@ -76,7 +79,6 @@ public class Instance {
         this.currentState = currentState;
     }
 
-
     //for provider
     public void attachContainer(String containerId) {
         this.containerId = containerId;
@@ -84,5 +86,13 @@ public class Instance {
 
     public void recordFailure(String reason) {
         this.failureReason = reason;
+    }
+
+    public boolean releaseQuota() {
+        if (this.quotaReleased) {
+            return false;
+        }
+        quotaReleased = true;
+        return true;
     }
 }

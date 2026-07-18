@@ -4,20 +4,25 @@ import com.cloud.polaris.instance.service.InstanceService;
 import com.cloud.polaris.provider.ComputeProvider;
 import com.cloud.polaris.provider.CreateContainerRequest;
 import com.cloud.polaris.provider.ProviderResource;
+import com.cloud.polaris.provider.ProviderResourceStatus;
 import com.cloud.polaris.task.domain.ClaimedTask;
 import com.cloud.polaris.task.domain.TaskType;
+import com.cloud.polaris.task.service.TaskService;
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class CreateInstanceHandler implements TaskHandler {
 
     private final ComputeProvider computeProvider;
     private final InstanceService instanceService;
+    private final TaskService taskService;
 
     @Override
     public TaskType supportedType() {
@@ -26,12 +31,50 @@ public class CreateInstanceHandler implements TaskHandler {
 
     @Override
     public void handle(ClaimedTask task) {
+        ProviderResource resource = computeProvider.findByInstanceId(task.instanceId())
+                .orElse(null);
+
+        if (resource != null && resource.status() == ProviderResourceStatus.RUNNING) {
+            instanceService.markRunning(task.instanceId(), resource.providerResourceId());
+            return;
+        }
+
         instanceService.markProvisioning(task.instanceId());
 
-        ProviderResource resource = computeProvider.findByInstanceId(task.instanceId())
-                .orElseGet(() ->
-                        computeProvider.createContainer(
-                                toCreateRequest(task)));
+        boolean createdInThisAttempt = false;
+
+        if (resource == null) {
+            resource = computeProvider.createContainer(toCreateRequest(task));
+            createdInThisAttempt = true;
+        }
+
+        try {
+            if (resource.status() != ProviderResourceStatus.RUNNING) {
+                computeProvider.start(resource.providerResourceId());
+            }
+
+            instanceService.markRunning(
+                    task.instanceId(),
+                    resource.providerResourceId()
+            );
+        } catch (Exception e) {
+            if (createdInThisAttempt) {
+                cleanupAfterFailure(resource);
+            }
+            throw e;
+        }
+    }
+
+    private void cleanupAfterFailure(ProviderResource resource) {
+        try {
+            computeProvider.delete(resource.providerResourceId());
+        } catch (Exception cleanupException) {
+            log.error(
+                    "Failed to cleanup Docker resource {}",
+                    resource.providerResourceId(),
+                    cleanupException
+            );
+        }
     }
 
     private CreateContainerRequest toCreateRequest(ClaimedTask task) {
@@ -57,9 +100,6 @@ public class CreateInstanceHandler implements TaskHandler {
                 ramMb,
                 labels
         );
-
-
-
     }
 
 }
