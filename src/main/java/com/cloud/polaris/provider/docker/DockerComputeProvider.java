@@ -3,9 +3,11 @@ package com.cloud.polaris.provider.docker;
 import com.cloud.polaris.provider.ComputeProvider;
 import com.cloud.polaris.provider.CreateContainerRequest;
 import com.cloud.polaris.provider.ProviderResource;
+import com.cloud.polaris.provider.ProviderResourceStatus;
 import com.github.dockerjava.api.DockerClient;
 import com.github.dockerjava.api.command.CreateContainerResponse;
 import com.github.dockerjava.api.model.Container;
+import com.github.dockerjava.api.model.HostConfig;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -22,18 +24,18 @@ public class DockerComputeProvider implements ComputeProvider {
 
     @Override
     public ProviderResource createContainer(CreateContainerRequest request) {
-        Map<String, String> labels = Map.of(
-                "polaris.managed", "true",
-                "polaris.instance_id", request.instanceId().toString(),
-                "polaris.tenant_id", request.tenantId().toString()
-        );
+        HostConfig hostConfig = HostConfig.newHostConfig()
+                .withMemory(request.ramMb() * 1024L)
+                .withCpuCount((long) request.cpuAllocated());
+
         CreateContainerResponse response = dockerClient
                 .createContainerCmd(request.imageName())
                 .withName(request.name())
-                .withLabels(labels)
+                .withLabels(request.labels())
+                .withHostConfig(hostConfig)
                 .exec();
 
-        return new ProviderResource(response.getId(), request.name());
+        return new ProviderResource(response.getId(), request.name(), ProviderResourceStatus.CREATED);
     }
 
     @Override
@@ -80,7 +82,14 @@ public class DockerComputeProvider implements ComputeProvider {
                 name = name.substring(1);
             }
         }
+        ProviderResourceStatus status =
+                switch (container.getStatus().toLowerCase()) {
+                    case "running" -> ProviderResourceStatus.RUNNING;
+                    case "created" -> ProviderResourceStatus.CREATED;
+                    case "exited", "dead" -> ProviderResourceStatus.STOPPED;
+                    default -> ProviderResourceStatus.UNKNOWN;
+                };
 
-        return Optional.of(new ProviderResource(container.getId(), name));
+        return Optional.of(new ProviderResource(container.getId(), name, status));
     }
 }

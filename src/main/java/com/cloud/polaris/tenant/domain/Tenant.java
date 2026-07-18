@@ -89,4 +89,17 @@ public class Tenant {
         allocatedInstanceCount += 1;
     }
 
+    public void release(int cpu, int ramMb) {
+        allocatedCpu -= cpu;
+        allocatedRamMb -= ramMb;
+        allocatedInstanceCount --;
+
+        if(allocatedCpu < 0 || allocatedRamMb < 0 || allocatedInstanceCount < 0) {
+            throw new IllegalStateException(
+                    "Quota allocation cannot become negative. " +
+                            "error code: Release tenant quota"
+            );
+        }
+    }
+
 }

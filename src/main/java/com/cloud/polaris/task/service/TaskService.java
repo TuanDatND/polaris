@@ -1,5 +1,6 @@
 package com.cloud.polaris.task.service;
 
+import com.cloud.polaris.instance.service.InstanceService;
 import com.cloud.polaris.task.domain.ClaimedTask;
 import com.cloud.polaris.task.domain.Task;
 import com.cloud.polaris.task.repository.TaskRepository;
@@ -15,6 +16,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class TaskService {
     private final TaskRepository taskRepository;
+    private final InstanceService instanceService;
 
     @Transactional
     public List<ClaimedTask> claimTasks(int limit, String workerId) {
@@ -41,6 +43,8 @@ public class TaskService {
 
         if (task.getAttempts()>=task.getMaxAttempts()) {
             task.markFailed(exception.getMessage());
+            instanceService.markFailed(task.getInstance().getId(), exception.getMessage());
+            instanceService.releaseQuota(task.getInstance().getId());
             return;
         }
 

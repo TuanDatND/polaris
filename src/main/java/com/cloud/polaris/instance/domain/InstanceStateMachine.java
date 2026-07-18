@@ -35,4 +35,17 @@ public class InstanceStateMachine {
 
         instance.changeCurrentState(to);
     }
+
+    public void transitionIfNecessary(
+            Instance instance,
+            CurrentState target
+    ) {
+        CurrentState current = instance.getCurrentState();
+
+        if (current == target) {
+            return; // Idempotent: gọi lại cũng không lỗi
+        }
+
+        transition(instance, target);
+    }
 }

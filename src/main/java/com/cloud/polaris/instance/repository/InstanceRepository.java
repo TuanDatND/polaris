@@ -2,7 +2,11 @@ package com.cloud.polaris.instance.repository;
 
 import com.cloud.polaris.instance.domain.CurrentState;
 import com.cloud.polaris.instance.domain.Instance;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -14,5 +18,9 @@ public interface InstanceRepository extends JpaRepository<Instance, UUID> {
                                                        CurrentState currentState);
 
     Optional<Instance> findByIdAndTenant_Id(UUID id, UUID tenantId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select i from Instance i where i.id = :id")
+    Optional<Instance> findByIdForUpdate(@Param("id") UUID id);
 }
 
