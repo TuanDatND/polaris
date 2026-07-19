@@ -24,3 +24,9 @@ logging:
     org.hibernate.SQL: DEBUG
     org.hibernate.orm.jdbc.bind: TRACE
     org.springframework.security: DEBUG
+
+polaris:
+    task:
+      recovery-timeout: 2m
+      recovery-interval: 10s
+      recovery-batch-size: 100

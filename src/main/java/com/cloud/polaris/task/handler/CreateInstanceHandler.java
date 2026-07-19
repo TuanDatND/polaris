@@ -1,13 +1,12 @@
 package com.cloud.polaris.task.handler;
 
-import com.cloud.polaris.instance.service.InstanceService;
+import com.cloud.polaris.instance.service.InstanceLifecycleService;
 import com.cloud.polaris.provider.ComputeProvider;
 import com.cloud.polaris.provider.CreateContainerRequest;
 import com.cloud.polaris.provider.ProviderResource;
 import com.cloud.polaris.provider.ProviderResourceStatus;
 import com.cloud.polaris.task.domain.ClaimedTask;
 import com.cloud.polaris.task.domain.TaskType;
-import com.cloud.polaris.task.service.TaskService;
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,8 +20,7 @@ import java.util.Map;
 public class CreateInstanceHandler implements TaskHandler {
 
     private final ComputeProvider computeProvider;
-    private final InstanceService instanceService;
-    private final TaskService taskService;
+    private final InstanceLifecycleService instanceLifecycleService;
 
     @Override
     public TaskType supportedType() {
@@ -35,11 +33,11 @@ public class CreateInstanceHandler implements TaskHandler {
                 .orElse(null);
 
         if (resource != null && resource.status() == ProviderResourceStatus.RUNNING) {
-            instanceService.markRunning(task.instanceId(), resource.providerResourceId());
+            instanceLifecycleService.markRunning(task.instanceId(), resource.providerResourceId());
             return;
         }
 
-        instanceService.markProvisioning(task.instanceId());
+        instanceLifecycleService.ensureProvisioning(task.instanceId());
 
         boolean createdInThisAttempt = false;
 
@@ -53,7 +51,7 @@ public class CreateInstanceHandler implements TaskHandler {
                 computeProvider.start(resource.providerResourceId());
             }
 
-            instanceService.markRunning(
+            instanceLifecycleService.markRunning(
                     task.instanceId(),
                     resource.providerResourceId()
             );

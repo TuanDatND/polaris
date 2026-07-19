@@ -78,5 +78,10 @@ CREATE INDEX idx_instances_current_state_updated_at
 CREATE INDEX idx_instances_desired_current
     ON instances (desired_state, current_state);
 
+CREATE INDEX idx_instances_failed_cleanup
+    ON instances (current_state, quota_released)
+    WHERE current_state = 'FAILED'
+  AND quota_released = FALSE;
+
 CREATE INDEX idx_instances_drift
     ON instances (desired_state, current_state, updated_at) WHERE desired_state != current_state;

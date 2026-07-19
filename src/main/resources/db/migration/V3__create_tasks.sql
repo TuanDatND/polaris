@@ -13,6 +13,8 @@ CREATE TABLE tasks
 
     available_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
 
+    claim_token     UUID,
+
     locked_at       TIMESTAMPTZ,
     locked_by       TEXT,
 

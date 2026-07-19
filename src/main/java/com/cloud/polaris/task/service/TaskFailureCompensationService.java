@@ -1,11 +1,8 @@
 package com.cloud.polaris.task.service;
 
-import com.cloud.polaris.common.exception.ResourceNotFoundException;
 import com.cloud.polaris.instance.service.InstanceCompensationService;
 import com.cloud.polaris.provider.ComputeProvider;
 import com.cloud.polaris.provider.ProviderResource;
-import com.cloud.polaris.task.domain.Task;
-import com.cloud.polaris.task.repository.TaskRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
