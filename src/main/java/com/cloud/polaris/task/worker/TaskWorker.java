@@ -55,7 +55,7 @@ public class TaskWorker {
             handler.handle(task);
             taskService.markSuccess(task.taskId());
         } catch (Exception exception) {
-            taskService.handleFailure(task.taskId(), exception);
+            taskService.handleFailure(task, exception);
         }
     }
 }

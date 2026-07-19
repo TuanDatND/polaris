@@ -1,5 +1,7 @@
 package com.cloud.polaris.task.service;
 
+import com.cloud.polaris.common.exception.ResourceNotFoundException;
+import com.cloud.polaris.instance.service.InstanceCompensationService;
 import com.cloud.polaris.instance.service.InstanceService;
 import com.cloud.polaris.task.domain.ClaimedTask;
 import com.cloud.polaris.task.domain.Task;
@@ -16,7 +18,8 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class TaskService {
     private final TaskRepository taskRepository;
-    private final InstanceService instanceService;
+    private final TaskFailureCompensationService failureCompensationService;
+    private final TaskStateService taskStateService;
 
     @Transactional
     public List<ClaimedTask> claimTasks(int limit, String workerId) {
@@ -37,21 +40,17 @@ public class TaskService {
         task.markSuccess();
     }
 
-    @Transactional
-    public void handleFailure(UUID taskId, Exception exception) {
-        Task task = taskRepository.findById(taskId).orElseThrow();
 
-        if (task.getAttempts()>=task.getMaxAttempts()) {
-            task.markFailed(exception.getMessage());
-            instanceService.markFailed(task.getInstance().getId(), exception.getMessage());
-            instanceService.releaseQuota(task.getInstance().getId());
+
+    public void handleFailure(ClaimedTask claimedTask, Exception exception) {
+        if (claimedTask.attempts() < claimedTask.maxAttempts()) {
+            taskStateService.retry(claimedTask, Instant.now().plusSeconds(  1L << claimedTask.attempts()), exception.getMessage());
             return;
         }
-
-        long delaySeconds = 1L << task.getAttempts();
-
-        task.retry(
-                Instant.now().plusSeconds(delaySeconds),
+        failureCompensationService.compensate(
+                claimedTask.taskId(),
+                claimedTask.tenantId(),
+                claimedTask.instanceId(),
                 exception.getMessage()
         );
     }

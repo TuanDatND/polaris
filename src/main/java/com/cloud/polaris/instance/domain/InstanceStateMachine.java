@@ -45,7 +45,6 @@ public class InstanceStateMachine {
         if (current == target) {
             return; // Idempotent: gọi lại cũng không lỗi
         }
-
         transition(instance, target);
     }
 }

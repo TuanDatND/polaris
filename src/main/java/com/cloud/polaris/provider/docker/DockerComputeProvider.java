@@ -83,7 +83,7 @@ public class DockerComputeProvider implements ComputeProvider {
             }
         }
         ProviderResourceStatus status =
-                switch (container.getStatus().toLowerCase()) {
+                switch (container.getState().toLowerCase()) {
                     case "running" -> ProviderResourceStatus.RUNNING;
                     case "created" -> ProviderResourceStatus.CREATED;
                     case "exited", "dead" -> ProviderResourceStatus.STOPPED;

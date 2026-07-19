@@ -9,7 +9,9 @@ public record ClaimedTask(
         TaskType type,
         UUID instanceId,
         UUID tenantId,
-        JsonNode payload
+        JsonNode payload,
+        int attempts,
+        int maxAttempts
 ) {
     public static ClaimedTask from(Task task) {
         return new ClaimedTask(
@@ -17,7 +19,9 @@ public record ClaimedTask(
                 task.getType(),
                 task.getInstance().getId(),
                 task.getTenant().getId(),
-                task.getPayload()
+                task.getPayload(),
+                task.getAttempts(),
+                task.getMaxAttempts()
         );
     }
 }

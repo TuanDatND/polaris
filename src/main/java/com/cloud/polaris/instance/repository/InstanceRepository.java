@@ -22,5 +22,12 @@ public interface InstanceRepository extends JpaRepository<Instance, UUID> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select i from Instance i where i.id = :id")
     Optional<Instance> findByIdForUpdate(@Param("id") UUID id);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select i from Instance i where i.id = :instanceId and i.tenant.id = :tenantId")
+    Optional<Instance> findByIdAndTenantIdForUpdate(
+           @Param("instanceId") UUID instanceId,
+           @Param("tenantId") UUID tenantId
+    );
 }
 
