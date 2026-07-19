@@ -58,3 +58,9 @@ app:
       - Authorization
     allow-credentials: false
     max-age: 3600
+
+polaris:
+    task:
+      recovery-timeout: 5m
+      recovery-interval: 30s
+      recovery-batch-size: 100

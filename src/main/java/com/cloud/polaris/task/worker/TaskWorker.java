@@ -1,11 +1,15 @@
 package com.cloud.polaris.task.worker;
 
+import com.cloud.polaris.common.exception.StaleTaskOwnerException;
 import com.cloud.polaris.task.domain.ClaimedTask;
 import com.cloud.polaris.task.domain.TaskType;
 import com.cloud.polaris.task.handler.TaskHandler;
-import com.cloud.polaris.task.service.TaskService;
+import com.cloud.polaris.task.service.TaskClaimService;
+import com.cloud.polaris.task.service.TaskExecutionService;
+import com.cloud.polaris.task.service.TaskStateService;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -17,10 +21,13 @@ import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 //Strategy Pattern (Mẫu chiến lược) kết hợp với Registry (Sổ danh bạ tra cứu).
 public class TaskWorker {
 
-    private final TaskService taskService;
+    private final TaskClaimService taskClaimService;
+    private final TaskStateService taskStateService;
+    private final TaskExecutionService taskExecutionService;
     private final List<TaskHandler> handlers;
 
     private Map<TaskType, TaskHandler> handlerRegistry;
@@ -38,7 +45,7 @@ public class TaskWorker {
 
     @Scheduled(fixedDelay = 1000)
     public void poll(){
-        List<ClaimedTask> tasks = taskService.claimTasks(10, workerId);
+        List<ClaimedTask> tasks = taskClaimService.claimTasks(10, workerId);
 
         tasks.forEach(this::process);
     }
@@ -53,9 +60,11 @@ public class TaskWorker {
                 );
             }
             handler.handle(task);
-            taskService.markSuccess(task.taskId());
+            taskStateService.markSuccess(task.taskId(), task.claimToken());
+        } catch (StaleTaskOwnerException exception) {
+            log.warn("Stale worker ignored for task {}", task.taskId());
         } catch (Exception exception) {
-            taskService.handleFailure(task, exception);
+            taskExecutionService.handleFailure(task, exception);
         }
     }
 }

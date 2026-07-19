@@ -39,6 +39,9 @@ public class Task {
     @Column(name = "status", nullable = false)
     private TaskStatus status;
 
+    @Column(name = "claim_token")
+    private UUID claimToken;
+
     @Column(name = "attempts", nullable = false)
     private int attempts;
 
@@ -88,7 +91,7 @@ public class Task {
         return task;
     }
 
-    public void claim(String workerId, Instant now) {
+    public void claim(String workerId, UUID claimToken , Instant now) {
         if (status != TaskStatus.QUEUED) {
             throw new IllegalStateException("Task is not queued");
         }
@@ -101,6 +104,7 @@ public class Task {
         attempts++;
         lockedAt = now;
         lockedBy = workerId;
+        this.claimToken = claimToken;
     }
 
     public void markSuccess() {
@@ -111,6 +115,8 @@ public class Task {
         status = TaskStatus.SUCCESS;
         lockedAt = null;
         lockedBy = null;
+        lastError = null;
+        claimToken = null;
     }
 
     public void retry(Instant nextAvailableAt, String error) {
@@ -123,6 +129,19 @@ public class Task {
         lastError = error;
         lockedAt = null;
         lockedBy = null;
+        claimToken = null;
+    }
+
+    public void recover(Instant now) {
+        if (status != TaskStatus.RUNNING) {
+            throw new IllegalStateException("Only running task can be recovered");
+        }
+
+        status = TaskStatus.QUEUED;
+        availableAt = now;
+        lockedAt = null;
+        lockedBy = null;
+        claimToken = null;
     }
 
     public void markFailed(String error) {
@@ -134,6 +153,7 @@ public class Task {
         lastError = error;
         lockedAt = null;
         lockedBy = null;
+        claimToken = null;
     }
 
 }

@@ -1,6 +1,7 @@
 package com.cloud.polaris.instance.api;
 
-import com.cloud.polaris.instance.service.InstanceService;
+import com.cloud.polaris.instance.service.InstanceCommandService;
+import com.cloud.polaris.instance.service.InstanceQueryService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -13,13 +14,14 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class InstanceController {
 
-    private final InstanceService instanceService;
+    private final InstanceQueryService instanceQueryService;
+    private final InstanceCommandService instanceCommandService;
 
     @GetMapping("/{id}")
     public InstanceResponse getInstance(
             @RequestHeader("X-Tenant-Id") UUID tenantId,
             @PathVariable UUID id) {
-        return instanceService.getInstance(tenantId, id);
+        return instanceQueryService.getInstance(tenantId, id);
     }
 
     @PostMapping
@@ -27,7 +29,7 @@ public class InstanceController {
     public InstanceResponse createInstance(
             @RequestHeader("X-Tenant-Id") UUID tenantId,
             @RequestBody @Valid CreateInstanceRequest createInstanceRequest) {
-        return instanceService.createInstance(tenantId, createInstanceRequest);
+        return instanceCommandService.createInstance(tenantId, createInstanceRequest);
     }
 
 

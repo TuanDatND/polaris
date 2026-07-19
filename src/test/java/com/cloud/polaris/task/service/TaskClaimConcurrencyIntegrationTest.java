@@ -44,7 +44,7 @@ class TaskClaimConcurrencyIntegrationTest {
     }
 
     @Autowired
-    TaskService taskService;
+    TaskClaimService taskClaimService;
 
     @Autowired
     TenantRepository tenantRepository;
@@ -109,7 +109,7 @@ class TaskClaimConcurrencyIntegrationTest {
         return CompletableFuture.runAsync(() -> {
             try {
                 assertThat(startGate.await(5, TimeUnit.SECONDS)).isTrue();
-                claims.addAll(taskService.claimTasks(10, workerId).stream().map(ClaimedTask::taskId).toList());
+                claims.addAll(taskClaimService.claimTasks(10, workerId).stream().map(ClaimedTask::taskId).toList());
 
             } catch (InterruptedException exception) {
                 Thread.currentThread().interrupt();
