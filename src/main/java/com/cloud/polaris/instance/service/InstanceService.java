@@ -48,7 +48,8 @@ public class InstanceService {
                         request.name(),
                         request.imageName(),
                         request.cpu(),
-                        request.ramMb()));
+                        request.ramMb())
+        );
 
         ObjectNode payload = JsonNodeFactory.instance.objectNode()
                 .put("name", instance.getName())
@@ -103,16 +104,4 @@ public class InstanceService {
         instance.recordFailure(reason);
     }
 
-    @Transactional
-    public void releaseQuota(UUID instanceId) {
-
-       Instance instance = instanceRepository.findByIdForUpdate(instanceId).orElseThrow(() -> new ResourceNotFoundException("Instance not found"));
-       Tenant tenant = tenantRepository.findByIdForUpdate(instance.getTenant().getId()).orElseThrow(() -> new ResourceNotFoundException("Tenant not found"));
-
-       if (!instance.releaseQuota()){
-           return ;
-       }
-
-       tenant.release(instance.getCpuAllocated(), instance.getRamMb());
-    }
 }

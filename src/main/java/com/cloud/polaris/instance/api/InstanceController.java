@@ -23,7 +23,7 @@ public class InstanceController {
     }
 
     @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
+    @ResponseStatus(HttpStatus.ACCEPTED)
     public InstanceResponse createInstance(
             @RequestHeader("X-Tenant-Id") UUID tenantId,
             @RequestBody @Valid CreateInstanceRequest createInstanceRequest) {
