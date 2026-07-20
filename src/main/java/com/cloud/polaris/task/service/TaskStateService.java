@@ -30,11 +30,19 @@ public class TaskStateService {
 
     @Transactional
     public void markSuccess(UUID taskId, UUID claimToken) {
-        Task task = taskRepository.findByIdForUpdate(taskId).orElseThrow();
-        if (!task.getClaimToken().equals(claimToken)) {
+        Task task = taskRepository.findByIdForUpdate(taskId).orElseThrow(() -> new ResourceNotFoundException("not found task " + taskId));
+        if (!Objects.equals(task.getClaimToken(), claimToken)) {
             throw new StaleTaskOwnerException(task.getId().toString());
         }
         task.markSuccess();
+    }
+
+    @Transactional
+    public void assertOwnership(ClaimedTask claimedTask) {
+        Task task = taskRepository.findByIdForUpdate(claimedTask.taskId()).orElseThrow(() -> new ResourceNotFoundException("not found task " + claimedTask.taskId()));
+        if (!Objects.equals(task.getClaimToken(), claimedTask.claimToken())) {
+            throw new StaleTaskOwnerException(task.getId().toString());
+        }
     }
 
 

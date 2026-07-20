@@ -17,10 +17,9 @@ public class TaskExecutionService {
             taskStateService.retry(claimedTask, Instant.now().plusSeconds(1L << claimedTask.attempts()), exception.getMessage());
             return;
         }
+
         failureCompensationService.compensate(
-                claimedTask.taskId(),
-                claimedTask.tenantId(),
-                claimedTask.instanceId(),
+                claimedTask,
                 exception.getMessage()
         );
     }
