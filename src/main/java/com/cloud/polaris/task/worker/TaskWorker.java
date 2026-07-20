@@ -61,10 +61,12 @@ public class TaskWorker {
             }
             handler.handle(task);
             taskStateService.markSuccess(task.taskId(), task.claimToken());
-        } catch (StaleTaskOwnerException exception) {
-            log.warn("Stale worker ignored for task {}", task.taskId());
         } catch (Exception exception) {
-            taskExecutionService.handleFailure(task, exception);
+            try{
+                taskExecutionService.handleFailure(task, exception);
+            } catch (StaleTaskOwnerException staleException) {
+                log.warn("Stale worker ignored for task {}", task.taskId());
+            }
         }
     }
 }

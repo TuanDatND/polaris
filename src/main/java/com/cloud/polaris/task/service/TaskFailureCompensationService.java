@@ -1,11 +1,17 @@
 package com.cloud.polaris.task.service;
 
+import com.cloud.polaris.common.exception.ResourceNotFoundException;
+import com.cloud.polaris.common.exception.StaleTaskOwnerException;
 import com.cloud.polaris.instance.service.InstanceCompensationService;
 import com.cloud.polaris.provider.ComputeProvider;
 import com.cloud.polaris.provider.ProviderResource;
+import com.cloud.polaris.task.domain.ClaimedTask;
+import com.cloud.polaris.task.domain.Task;
+import com.cloud.polaris.task.repository.TaskRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -15,13 +21,15 @@ public class TaskFailureCompensationService {
 
     private final ComputeProvider computeProvider;
     private final InstanceCompensationService instanceCompensationService;
+    private final TaskStateService taskStateService;
 
-    public void compensate(UUID taskId, UUID tenantId, UUID instanceId, String reason) {
-        Optional<ProviderResource> resource = computeProvider.findByInstanceId(instanceId);
+    public void compensate(ClaimedTask claimedTask, String reason) {
+        Optional<ProviderResource> resource = computeProvider.findByInstanceId(claimedTask.instanceId());
 
         boolean resourceAbsent = resource.isEmpty();
 
         if (resource.isPresent()) {
+            taskStateService.assertOwnership(claimedTask);
             try {
                 computeProvider.delete(resource.get().providerResourceId());
                 resourceAbsent = true;
@@ -30,6 +38,6 @@ public class TaskFailureCompensationService {
                 resourceAbsent = false;
             }
         }
-        instanceCompensationService.finalizeFailure(taskId, tenantId, instanceId, reason, resourceAbsent);
+        instanceCompensationService.finalizeFailure(claimedTask, reason, resourceAbsent);
     }
 }

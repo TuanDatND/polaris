@@ -1,9 +1,11 @@
 package com.cloud.polaris.instance.service;
 
 import com.cloud.polaris.common.exception.ResourceNotFoundException;
+import com.cloud.polaris.common.exception.StaleTaskOwnerException;
 import com.cloud.polaris.instance.domain.CurrentState;
 import com.cloud.polaris.instance.domain.Instance;
 import com.cloud.polaris.instance.repository.InstanceRepository;
+import com.cloud.polaris.task.domain.ClaimedTask;
 import com.cloud.polaris.task.domain.Task;
 import com.cloud.polaris.task.repository.TaskRepository;
 import com.cloud.polaris.tenant.domain.Tenant;
@@ -12,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Objects;
 import java.util.UUID;
 
 @Service
@@ -23,10 +26,17 @@ public class InstanceCompensationService {
     private final InstanceLifecycleService instanceLifecycleService;
 
     @Transactional
-    public void finalizeFailure(UUID taskId, UUID tenantId, UUID instanceId, String reason, boolean resourceAbsent) {
-        Tenant tenant = tenantRepository.findByIdForUpdate(tenantId).orElseThrow(() -> new ResourceNotFoundException("Tenant not found"));
-        Task task = taskRepository.findByIdForUpdate(taskId).orElseThrow(() -> new ResourceNotFoundException("Task not found"));
-        Instance instance = instanceRepository.findByIdAndTenantIdForUpdate(instanceId, tenantId).orElseThrow(() -> new ResourceNotFoundException("Instance not found"));
+    public void finalizeFailure(ClaimedTask claimedTask, String reason, boolean resourceAbsent) {
+        Tenant tenant = tenantRepository.findByIdForUpdate(claimedTask.tenantId()).orElseThrow(() -> new ResourceNotFoundException("Tenant not found"));
+        Task task = taskRepository.findByIdForUpdate(claimedTask.taskId()).orElseThrow(() -> new ResourceNotFoundException("Task not found"));
+        Instance instance = instanceRepository.findByIdAndTenantIdForUpdate(claimedTask.instanceId(), claimedTask.tenantId()).orElseThrow(() -> new ResourceNotFoundException("Instance not found"));
+
+        if (!Objects.equals(
+                task.getClaimToken(),
+                claimedTask.claimToken()
+        )) {
+            throw new StaleTaskOwnerException(task.getId().toString());
+        }
 
         if (task.getAttempts() >= task.getMaxAttempts()) {
             task.markFailed(reason);
