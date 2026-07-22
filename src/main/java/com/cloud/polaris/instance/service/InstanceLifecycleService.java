@@ -67,40 +67,6 @@ public class InstanceLifecycleService {
     }
 
     @Transactional
-    public void markStopping(ClaimedTask claimedTask) {
-        Instance instance = assertToken(claimedTask);
-
-        stateMachine.transitionIfNecessary(instance, CurrentState.STOPPING);
-    }
-
-    @Transactional
-    public void markStopped(ClaimedTask claimedTask) {
-        Instance instance = assertToken(claimedTask);
-
-        if (instance.getDesiredState() != DesiredState.STOPPED) {
-            return;
-        }
-
-        if (instance.getCurrentState() == CurrentState.STOPPED) {
-            return;
-        }
-
-        if (instance.getCurrentState() != CurrentState.RUNNING
-                && instance.getCurrentState() != CurrentState.STOPPING) {
-            throw new IllegalStateException(
-                    "Cannot complete stop from state "
-                            + instance.getCurrentState()
-            );
-        }
-
-        stateMachine.transitionIfNecessary(
-                instance,
-                CurrentState.STOPPED
-        );
-
-    }
-
-    @Transactional
     public void markStopFailed(ClaimedTask claimedTask, String reason) {
         Instance instance = assertToken(claimedTask);
 
@@ -174,6 +140,20 @@ public class InstanceLifecycleService {
             );
         }
 
+        if (resourceMissing) {
+            instance.clearContainer();
+        }
+    }
+
+    @Transactional
+    public void completeStopFromReconciliation(UUID instanceId, boolean resourceMissing) {
+        Instance instance = instanceRepository.findByIdForUpdate(instanceId).orElseThrow(() -> new ResourceNotFoundException("Instance not found: " + instanceId));
+        if (instance.getDesiredState() != DesiredState.STOPPED) {
+            return;
+        }
+        if (instance.getCurrentState() == CurrentState.STOPPING) {
+            stateMachine.transitionIfNecessary(instance, CurrentState.STOPPED);
+        }
         if (resourceMissing) {
             instance.clearContainer();
         }

@@ -6,6 +6,8 @@ import java.time.Duration;
 
 @ConfigurationProperties(prefix = "polaris.task")
 public record TaskProperties(
+        Duration pollInterval,
+        int workerConcurrency,
         Duration recoveryTimeout,
         int recoveryBatchSize
 ) {

@@ -26,7 +26,9 @@ logging:
     org.springframework.security: DEBUG
 
 polaris:
-    task:
-      recovery-timeout: 2m
-      recovery-interval: 10s
-      recovery-batch-size: 100
+  task:
+    poll-interval: 1s
+    worker-concurrency: 4
+    recovery-timeout: 2m
+    recovery-interval: 10s
+    recovery-batch-size: 100
