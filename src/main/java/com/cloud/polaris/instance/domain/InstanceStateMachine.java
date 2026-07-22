@@ -11,11 +11,11 @@ import java.util.Set;
 public class InstanceStateMachine {
 
     private static final Map<CurrentState, Set<CurrentState>> ALLOWED_TRANSITIONS = Map.of(
-            CurrentState.PENDING, Set.of(CurrentState.PROVISIONING, CurrentState.FAILED),
-            CurrentState.PROVISIONING, Set.of(CurrentState.RUNNING, CurrentState.FAILED),
+            CurrentState.PENDING, Set.of(CurrentState.PROVISIONING,CurrentState.STOPPED ,CurrentState.FAILED),
+            CurrentState.PROVISIONING, Set.of(CurrentState.RUNNING,CurrentState.STOPPED, CurrentState.FAILED),
             CurrentState.STARTING, Set.of(CurrentState.RUNNING, CurrentState.FAILED),
             CurrentState.RUNNING, Set.of(CurrentState.STOPPING, CurrentState.DELETING, CurrentState.FAILED),
-            CurrentState.STOPPING, Set.of(CurrentState.STOPPED, CurrentState.FAILED),
+            CurrentState.STOPPING, Set.of(CurrentState.STOPPED, CurrentState.RUNNING, CurrentState.FAILED),
             CurrentState.STOPPED, Set.of(CurrentState.STARTING, CurrentState.DELETING),
             CurrentState.DELETING, Set.of(CurrentState.DELETED, CurrentState.FAILED),
             CurrentState.FAILED, Set.of(CurrentState.DELETING),

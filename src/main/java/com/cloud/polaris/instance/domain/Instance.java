@@ -48,7 +48,7 @@ public class Instance {
     @Column(name = "failure_reason")
     private String failureReason;
 
-    @Column( name = "quota_released", nullable = false)
+    @Column(name = "quota_released", nullable = false)
     private boolean quotaReleased;
 
     @Version
@@ -75,6 +75,10 @@ public class Instance {
         return instance;
     }
 
+    public void requestStop() {
+        this.desiredState = DesiredState.STOPPED;
+    }
+
     void changeCurrentState(CurrentState currentState) {
         this.currentState = currentState;
     }
@@ -82,6 +86,10 @@ public class Instance {
     //for provider
     public void attachContainer(String containerId) {
         this.containerId = containerId;
+    }
+
+    public void clearContainer() {
+        this.containerId = null;
     }
 
     public void recordFailure(String reason) {

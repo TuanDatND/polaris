@@ -61,12 +61,34 @@ public class TaskWorker {
             }
             handler.handle(task);
             taskStateService.markSuccess(task.taskId(), task.claimToken());
-        } catch (Exception exception) {
-            try{
-                taskExecutionService.handleFailure(task, exception);
-            } catch (StaleTaskOwnerException staleException) {
-                log.warn("Stale worker ignored for task {}", task.taskId());
-            }
+        } catch (Exception executionException) {
+            handleExecutionFailure(task, executionException);
+        }
+    }
+
+    private void handleExecutionFailure(
+            ClaimedTask task,
+            Exception executionException
+    ) {
+        try {
+            taskExecutionService.handleFailure(
+                    task,
+                    executionException
+            );
+
+        } catch (StaleTaskOwnerException staleException) {
+            log.warn(
+                    "Stale worker ignored for task {}",
+                    task.taskId()
+            );
+
+        } catch (Exception failureHandlingException) {
+            log.error(
+                    "Failed to handle failure for task {}. " +
+                            "Task will be recovered by TaskRecovery.",
+                    task.taskId(),
+                    failureHandlingException
+            );
         }
     }
 }
