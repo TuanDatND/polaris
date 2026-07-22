@@ -3,6 +3,10 @@ package com.cloud.polaris.instance.api;
 
 
 import com.cloud.polaris.instance.repository.InstanceRepository;
+import com.cloud.polaris.task.domain.TaskStatus;
+import com.cloud.polaris.task.domain.TaskType;
+import com.cloud.polaris.task.repository.TaskRepository;
+import com.cloud.polaris.task.worker.TaskWorker;
 import com.cloud.polaris.tenant.domain.Tenant;
 import com.cloud.polaris.tenant.repository.TenantRepository;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -13,6 +17,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -51,10 +56,16 @@ class InstanceApiIntegrationTest {
     @Autowired
     InstanceRepository instanceRepository;
     @Autowired
+    TaskRepository taskRepository;
+    @Autowired
     ObjectMapper objectMapper;
+
+    @MockitoBean
+    TaskWorker taskWorker;
 
     @BeforeEach
     void cleanDatabase() {
+        taskRepository.deleteAll();
         instanceRepository.deleteAll();
         tenantRepository.deleteAll();
     }
@@ -74,7 +85,7 @@ class InstanceApiIntegrationTest {
                                   "ramMb": 512
                                 }
                                 """))
-                .andExpect(status().isCreated())
+                .andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.name").value("nginx-1"))
                 .andExpect(jsonPath("$.imageName").value("nginx:latest"))
                 .andExpect(jsonPath("$.desiredState").value("RUNNING"))
@@ -85,6 +96,14 @@ class InstanceApiIntegrationTest {
         assertThat(updatedTenant.getAllocatedCpu()).isEqualTo(1);
         assertThat(updatedTenant.getAllocatedRamMb()).isEqualTo(512);
         assertThat(updatedTenant.getAllocatedInstanceCount()).isEqualTo(1);
+
+        assertThat(taskRepository.findAll())
+                .singleElement()
+                .satisfies(task -> {
+                    assertThat(task.getType()).isEqualTo(TaskType.CREATE_INSTANCE);
+                    assertThat(task.getStatus()).isEqualTo(TaskStatus.QUEUED);
+                    assertThat(task.getTenant().getId()).isEqualTo(tenant.getId());
+                });
     }
 
     @Test
@@ -129,7 +148,7 @@ class InstanceApiIntegrationTest {
                         .header("X-Tenant-Id", tenant.getId())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
-                .andExpect(status().isCreated());
+                .andExpect(status().isAccepted());
 
         mockMvc.perform(post("/api/v1/instances")
                         .header("X-Tenant-Id", tenant.getId())
@@ -173,7 +192,7 @@ class InstanceApiIntegrationTest {
                                   "ramMb": 512
                                 }
                                 """))
-                .andExpect(status().isCreated())
+                .andExpect(status().isAccepted())
                 .andReturn()
                 .getResponse()
                 .getContentAsString();

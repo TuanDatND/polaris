@@ -95,7 +95,13 @@ public class TaskWorker {
         } catch (RejectedExecutionException exception) {
             workerSlots.release();
             try {
-                taskStateService.retry(task, Instant.now(), "Worker executor rejected task");
+                if (!shuttingDown) {
+                    taskStateService.retry(
+                            task,
+                            Instant.now(),
+                            "Worker executor rejected task"
+                    );
+                }
             }catch (Exception retryException){
                 log.error(
                         "Could not requeue rejected task {}",
@@ -128,6 +134,7 @@ public class TaskWorker {
             )){
                 log.warn("Task workers did not finish in time. " + "Interrupting them.");
             }
+            taskWorkerExecutor.shutdownNow();
         }catch (InterruptedException exception){
             Thread.currentThread().interrupt();
             taskWorkerExecutor.shutdownNow();
@@ -135,6 +142,11 @@ public class TaskWorker {
     }
 
     private void process(ClaimedTask task) {
+        log.debug(
+                "Processing task {} on thread {}",
+                task.taskId(),
+                Thread.currentThread().getName()
+        );
         try {
             TaskHandler handler = handlerRegistry.get(task.type());
 
