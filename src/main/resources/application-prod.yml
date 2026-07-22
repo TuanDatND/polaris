@@ -24,3 +24,11 @@ logging:
     org.hibernate.SQL: WARN
     org.hibernate.orm.jdbc.bind: OFF
     org.springframework.security: WARN
+
+polaris:
+  task:
+    poll-interval: 2s
+    worker-concurrency: 4
+    recovery-timeout: 5m
+    recovery-interval: 30s
+    recovery-batch-size: 100

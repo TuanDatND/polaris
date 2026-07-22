@@ -1,8 +1,10 @@
 package com.cloud.polaris.instance.repository;
 
 import com.cloud.polaris.instance.domain.CurrentState;
+import com.cloud.polaris.instance.domain.DesiredState;
 import com.cloud.polaris.instance.domain.Instance;
 import jakarta.persistence.LockModeType;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
@@ -27,19 +29,29 @@ public interface InstanceRepository extends JpaRepository<Instance, UUID> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select i from Instance i where i.id = :instanceId and i.tenant.id = :tenantId")
     Optional<Instance> findByIdAndTenantIdForUpdate(
-           @Param("instanceId") UUID instanceId,
-           @Param("tenantId") UUID tenantId
+            @Param("instanceId") UUID instanceId,
+            @Param("tenantId") UUID tenantId
     );
 
     @Query("""
-    select i.id
-    from Instance i
-    where i.currentState = :state
-      and i.desiredState = 'RUNNING'
-      and i.quotaReleased = false
-""")
+                select i.id
+                from Instance i
+                where i.currentState = :state
+                  and i.desiredState = 'RUNNING'
+                  and i.quotaReleased = false
+            """)
     List<UUID> findFailedInstanceIdsForCleanup(
             @Param("state") CurrentState state
+    );
+
+    @Query("""
+            select i.id from Instance i
+            where i.currentState = :currentState
+              and i.desiredState = :desiredState order by i.updatedAt""")
+    List<UUID> findInstanceIdsForStopReconciliation(
+            @Param("currentState") CurrentState currentState,
+            @Param("desiredState") DesiredState desiredState,
+            Pageable pageable
     );
 }
 
