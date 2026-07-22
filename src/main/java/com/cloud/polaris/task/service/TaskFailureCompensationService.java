@@ -9,6 +9,7 @@ import com.cloud.polaris.task.domain.ClaimedTask;
 import com.cloud.polaris.task.domain.Task;
 import com.cloud.polaris.task.repository.TaskRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.Objects;
@@ -16,6 +17,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class TaskFailureCompensationService {
 
@@ -34,8 +36,12 @@ public class TaskFailureCompensationService {
                 computeProvider.delete(resource.get().providerResourceId());
                 resourceAbsent = true;
             } catch (Exception cleanupException) {
-                // Không được giả định container đã biến mất
-                resourceAbsent = false;
+                log.error(
+                        "Failed to cleanup provider resource {} for task {}",
+                        resource.get().providerResourceId(),
+                        claimedTask.taskId(),
+                        cleanupException
+                );
             }
         }
         instanceCompensationService.finalizeFailure(claimedTask, reason, resourceAbsent);

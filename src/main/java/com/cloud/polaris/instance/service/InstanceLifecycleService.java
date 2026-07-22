@@ -2,14 +2,21 @@ package com.cloud.polaris.instance.service;
 
 import com.cloud.polaris.common.exception.IllegalStateTransitionException;
 import com.cloud.polaris.common.exception.ResourceNotFoundException;
+import com.cloud.polaris.common.exception.StaleTaskOwnerException;
 import com.cloud.polaris.instance.domain.CurrentState;
+import com.cloud.polaris.instance.domain.DesiredState;
 import com.cloud.polaris.instance.domain.Instance;
 import com.cloud.polaris.instance.domain.InstanceStateMachine;
 import com.cloud.polaris.instance.repository.InstanceRepository;
+import com.cloud.polaris.task.domain.ClaimedTask;
+import com.cloud.polaris.task.domain.Task;
+import com.cloud.polaris.task.repository.TaskRepository;
+import com.cloud.polaris.task.service.TaskStateService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Objects;
 import java.util.UUID;
 
 @Service
@@ -17,6 +24,8 @@ import java.util.UUID;
 public class InstanceLifecycleService {
     private final InstanceRepository instanceRepository;
     private final InstanceStateMachine stateMachine;
+    private final TaskRepository taskRepository;
+    private final TaskStateService taskStateService;
 
     @Transactional
     public void ensureProvisioning(UUID instanceId) {
@@ -45,11 +54,60 @@ public class InstanceLifecycleService {
     }
 
     @Transactional
-    public void markRunning(UUID instanceId, String containerId) {
-        Instance instance =  instanceRepository.findById(instanceId).orElseThrow(() -> new ResourceNotFoundException("Instance not found: " + instanceId));
+    public boolean markRunning(ClaimedTask claimedTask, String containerId) {
+        Instance instance = assertToken(claimedTask);
+
+        if (instance.getDesiredState() != DesiredState.RUNNING) {
+            return false;
+        }
 
         stateMachine.transitionIfNecessary(instance, CurrentState.RUNNING);
         instance.attachContainer(containerId);
+        return true;
+    }
+
+    @Transactional
+    public void markStopping(ClaimedTask claimedTask) {
+        Instance instance = assertToken(claimedTask);
+
+        stateMachine.transitionIfNecessary(instance, CurrentState.STOPPING);
+    }
+
+    @Transactional
+    public void markStopped(ClaimedTask claimedTask) {
+        Instance instance = assertToken(claimedTask);
+
+        if (instance.getDesiredState() != DesiredState.STOPPED) {
+            return;
+        }
+
+        if (instance.getCurrentState() == CurrentState.STOPPED) {
+            return;
+        }
+
+        if (instance.getCurrentState() != CurrentState.RUNNING
+                && instance.getCurrentState() != CurrentState.STOPPING) {
+            throw new IllegalStateException(
+                    "Cannot complete stop from state "
+                            + instance.getCurrentState()
+            );
+        }
+
+        stateMachine.transitionIfNecessary(
+                instance,
+                CurrentState.STOPPED
+        );
+
+    }
+
+    @Transactional
+    public void markStopFailed(ClaimedTask claimedTask, String reason) {
+        Instance instance = assertToken(claimedTask);
+
+        if (instance.getCurrentState() == CurrentState.STOPPING) {
+            stateMachine.transitionIfNecessary(instance, CurrentState.RUNNING);
+        }
+        instance.recordFailure(reason);
     }
 
     @Transactional
@@ -60,5 +118,81 @@ public class InstanceLifecycleService {
         );
 
         instance.recordFailure(reason);
+    }
+
+    @Transactional
+    public void ensureStopping(ClaimedTask claimedTask) {
+        Instance instance = assertToken(claimedTask);
+
+        if (instance.getDesiredState() != DesiredState.STOPPED) {
+            return;
+        }
+
+        switch (instance.getCurrentState()) {
+            case RUNNING -> stateMachine.transitionIfNecessary(instance, CurrentState.STOPPING);
+            case STOPPING, STOPPED -> {
+                // idempotent
+            }
+            case PENDING, PROVISIONING -> throw new IllegalStateException("Instance has not started yet");
+            default ->
+                    throw new IllegalStateException("Cannot stop instance from " + instance.getCurrentState() + " state");
+        }
+    }
+
+    @Transactional
+    public void completeStop(ClaimedTask claimedTask, boolean resourceMissing) {
+        Instance instance = assertToken(claimedTask);
+
+        if (instance.getDesiredState() != DesiredState.STOPPED) {
+            return;
+        }
+
+        switch (instance.getCurrentState()) {
+            case PENDING, PROVISIONING, STOPPING -> stateMachine.transitionIfNecessary(
+                    instance,
+                    CurrentState.STOPPED
+            );
+
+            case RUNNING -> {
+                stateMachine.transitionIfNecessary(
+                        instance,
+                        CurrentState.STOPPING
+                );
+                stateMachine.transitionIfNecessary(
+                        instance,
+                        CurrentState.STOPPED
+                );
+            }
+
+            case STOPPED -> {
+                // idempotent
+            }
+
+            default -> throw new IllegalStateException(
+                    "Cannot complete stop from "
+                            + instance.getCurrentState()
+            );
+        }
+
+        if (resourceMissing) {
+            instance.clearContainer();
+        }
+    }
+
+    @Transactional
+    public Instance assertToken(ClaimedTask claimedTask) {
+        Task task = taskRepository
+                .findByIdForUpdate(claimedTask.taskId())
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Task not found: "
+                                        + claimedTask.taskId()
+                        )
+                );
+
+        if (claimedTask.claimToken() == null || !Objects.equals(task.getClaimToken(), claimedTask.claimToken())) {
+            throw new StaleTaskOwnerException(task.getId().toString());
+        }
+        return instanceRepository.findByIdAndTenantIdForUpdate(claimedTask.instanceId(), task.getTenant().getId()).orElseThrow(() -> new ResourceNotFoundException("Instance not found: " + claimedTask.instanceId()));
     }
 }

@@ -38,9 +38,21 @@ public class TaskStateService {
     }
 
     @Transactional
+    public void markFailed(ClaimedTask claimedTask, String error) {
+        Task task = taskRepository.findByIdForUpdate(claimedTask.taskId()).orElseThrow(() -> new ResourceNotFoundException("Task not found: " + claimedTask.taskId()));
+
+        if (claimedTask.claimToken() == null
+                || !Objects.equals(task.getClaimToken(), claimedTask.claimToken())) {
+            throw new StaleTaskOwnerException(task.getId().toString());
+        }
+        task.markFailed(error);
+    }
+
+    @Transactional
     public void assertOwnership(ClaimedTask claimedTask) {
         Task task = taskRepository.findByIdForUpdate(claimedTask.taskId()).orElseThrow(() -> new ResourceNotFoundException("not found task " + claimedTask.taskId()));
-        if (!Objects.equals(task.getClaimToken(), claimedTask.claimToken())) {
+
+        if (claimedTask.claimToken() == null || !Objects.equals(task.getClaimToken(), claimedTask.claimToken())) {
             throw new StaleTaskOwnerException(task.getId().toString());
         }
     }

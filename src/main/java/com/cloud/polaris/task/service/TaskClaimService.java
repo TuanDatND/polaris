@@ -23,7 +23,7 @@ public class TaskClaimService {
         List<Task> tasks = taskRepository.findQueuedTasksForUpdate(limit);
         Instant now = Instant.now();
 
-        tasks.forEach(task -> task.claim(workerId, UUID.randomUUID(),now));
+        tasks.forEach(task -> task.claim(workerId, UUID.randomUUID(), now));
         return tasks.stream()
                 .map(ClaimedTask::from)
                 .toList();

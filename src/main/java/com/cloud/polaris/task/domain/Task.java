@@ -85,7 +85,25 @@ public class Task {
         task.maxAttempts = 5;
         task.availableAt = Instant.now();
         task.idempotencyKey = "create-instance:" + instance.getId();
-        ;
+        task.payload = payload;
+
+        return task;
+    }
+
+    public static Task stopInstanceTask(Tenant tenant, Instance instance, JsonNode payload, UUID operationId) {
+        Task task = new Task();
+        task.tenant = tenant;
+        task.instance = instance;
+        task.type = TaskType.STOP_INSTANCE;
+        task.status = TaskStatus.QUEUED;
+        task.attempts = 0;
+        task.maxAttempts = 5;
+        task.availableAt = Instant.now();
+        task.idempotencyKey =
+                "stop-instance:"
+                        + instance.getId()
+                        + ":"
+                        + operationId;
         task.payload = payload;
 
         return task;
@@ -111,7 +129,6 @@ public class Task {
         if(status != TaskStatus.RUNNING) {
             throw new IllegalStateException("Task is not running");
         }
-
         status = TaskStatus.SUCCESS;
         lockedAt = null;
         lockedBy = null;

@@ -35,6 +35,7 @@ public interface InstanceRepository extends JpaRepository<Instance, UUID> {
     select i.id
     from Instance i
     where i.currentState = :state
+      and i.desiredState = 'RUNNING'
       and i.quotaReleased = false
 """)
     List<UUID> findFailedInstanceIdsForCleanup(
