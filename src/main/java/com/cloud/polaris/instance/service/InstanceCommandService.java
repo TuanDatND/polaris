@@ -92,7 +92,7 @@ public class InstanceCommandService {
             throw new IllegalStateException("Cannot start instance while it is not stopped: " + instanceId);
         }
 
-        boolean startTaskExists = taskRepository.existsByInstance_IdAndTypeAndStatusIn(instanceId, TaskType.CREATE_INSTANCE, Set.of(TaskStatus.QUEUED, TaskStatus.RUNNING));
+        boolean startTaskExists = taskRepository.existsByInstance_IdAndTypeAndStatusIn(instanceId, TaskType.START_INSTANCE, Set.of(TaskStatus.QUEUED, TaskStatus.RUNNING));
 
         if (startTaskExists) {
             return InstanceResponse.from(instance);
@@ -152,6 +152,42 @@ public class InstanceCommandService {
         taskRepository.save(
                 Task.stopInstanceTask(tenant, instance, null, UUID.randomUUID())
         );
+        return InstanceResponse.from(instance);
+    }
+
+    @Transactional
+    public InstanceResponse deleteInstance(UUID tenantId, UUID instanceId) {
+        Tenant tenant = tenantRepository.findByIdForUpdate(tenantId).orElseThrow(() -> new ResourceNotFoundException("Tenant not found: " + tenantId));
+
+        Instance instance = instanceRepository.findByIdAndTenantIdForUpdate(instanceId, tenantId).orElseThrow(() -> new ResourceNotFoundException("Instance not found: " + instanceId));
+
+        CurrentState currentState = instance.getCurrentState();
+        if (currentState == CurrentState.DELETED || currentState == CurrentState.DELETING){
+            return InstanceResponse.from(instance);
+        }
+
+
+        if (currentState != CurrentState.STOPPED) {
+            throw new IllegalStateException("Only STOPPED instance can be deleted:  " + currentState);
+        }
+
+        boolean deleteTaskExists = taskRepository.existsByInstance_IdAndTypeAndStatusIn(
+                instanceId,
+                TaskType.DELETE_INSTANCE,
+                Set.of(TaskStatus.QUEUED, TaskStatus.RUNNING)
+        );
+
+        if (deleteTaskExists) {
+            return InstanceResponse.from(instance);
+        }
+
+        instance.requestDelete();
+
+        taskRepository.save(Task.deleteInstanceTask(
+                tenant,
+                instance,
+                UUID.randomUUID()
+        ));
         return InstanceResponse.from(instance);
     }
 }

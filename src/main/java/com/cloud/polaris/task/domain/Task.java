@@ -127,7 +127,25 @@ public class Task {
         return task;
     }
 
-    public void claim(String workerId, UUID claimToken , Instant now) {
+    public static Task deleteInstanceTask(Tenant tenant, Instance instance, UUID operationId) {
+        Task task = new Task();
+        task.tenant = tenant;
+        task.instance = instance;
+        task.type = TaskType.DELETE_INSTANCE;
+        task.status = TaskStatus.QUEUED;
+        task.attempts = 0;
+        task.maxAttempts = 5;
+        task.availableAt = Instant.now();
+        task.idempotencyKey =
+                "delete-instance:"
+                        + instance.getId()
+                        + ":"
+                        + operationId;
+
+        return task;
+    }
+
+    public void claim(String workerId, UUID claimToken, Instant now) {
         if (status != TaskStatus.QUEUED) {
             throw new IllegalStateException("Task is not queued");
         }
@@ -144,7 +162,7 @@ public class Task {
     }
 
     public void markSuccess() {
-        if(status != TaskStatus.RUNNING) {
+        if (status != TaskStatus.RUNNING) {
             throw new IllegalStateException("Task is not running");
         }
         status = TaskStatus.SUCCESS;
