@@ -47,4 +47,16 @@ public class InstanceController {
             @PathVariable UUID instanceId) {
         return instanceCommandService.stopInstance(tenantId,instanceId);
     }
+
+    @DeleteMapping("/{instanceId}")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public InstanceResponse deleteInstance(
+            @RequestHeader("X-Tenant-Id") UUID tenantId,
+            @PathVariable UUID instanceId
+    ) {
+        return instanceCommandService.deleteInstance(
+                tenantId,
+                instanceId
+        );
+    }
 }

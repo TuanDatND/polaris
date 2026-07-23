@@ -82,6 +82,9 @@ public class Instance {
     public void requestStop() {
         this.desiredState = DesiredState.STOPPED;
     }
+    public void requestDelete() {
+        this.desiredState = DesiredState.DELETED;
+    }
 
     void changeCurrentState(CurrentState currentState) {
         this.currentState = currentState;

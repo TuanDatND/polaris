@@ -68,7 +68,8 @@ public class InstanceCompensationService {
                 .findByIdAndTenantIdForUpdate(instanceId, tenantId)
                 .orElseThrow();
 
-        if (instance.getCurrentState() != CurrentState.FAILED) {
+        if (instance.getCurrentState() != CurrentState.FAILED
+                && instance.getCurrentState() != CurrentState.DELETED) {
             return;
         }
 

@@ -64,22 +64,6 @@ public class InstanceLifecycleService {
         return true;
     }
 
-    @Transactional
-    public void ensureStarting(ClaimedTask claimedTask) {
-        Instance instance = assertToken(claimedTask);
-
-        if (instance.getDesiredState() != DesiredState.RUNNING) {
-            return;
-        }
-
-        switch (instance.getCurrentState()) {
-            case STOPPED -> stateMachine.transitionIfNecessary(instance, CurrentState.STARTING);
-            case STARTING, RUNNING -> {
-                //Idempotent
-            }
-            default -> throw new IllegalStateException("Cannot start instance from " + instance.getCurrentState());
-        }
-    }
 
     @Transactional
     public void markStopFailed(ClaimedTask claimedTask, String reason) {
@@ -102,6 +86,23 @@ public class InstanceLifecycleService {
     }
 
     @Transactional
+    public void ensureStarting(ClaimedTask claimedTask) {
+        Instance instance = assertToken(claimedTask);
+
+        if (instance.getDesiredState() != DesiredState.RUNNING) {
+            return;
+        }
+
+        switch (instance.getCurrentState()) {
+            case STOPPED -> stateMachine.transitionIfNecessary(instance, CurrentState.STARTING);
+            case STARTING, RUNNING -> {
+                //Idempotent
+            }
+            default -> throw new IllegalStateException("Cannot start instance from " + instance.getCurrentState());
+        }
+    }
+
+    @Transactional
     public void ensureStopping(ClaimedTask claimedTask) {
         Instance instance = assertToken(claimedTask);
 
@@ -117,6 +118,30 @@ public class InstanceLifecycleService {
             case PENDING, PROVISIONING -> throw new IllegalStateException("Instance has not started yet");
             default ->
                     throw new IllegalStateException("Cannot stop instance from " + instance.getCurrentState() + " state");
+        }
+    }
+
+    @Transactional
+    public void ensureDeleting(ClaimedTask claimedTask) {
+        Instance instance = assertToken(claimedTask);
+
+        if (instance.getDesiredState() != DesiredState.DELETED) {
+            return;
+        }
+        switch (instance.getCurrentState()) {
+            case STOPPED ->
+                    stateMachine.transitionIfNecessary(
+                            instance,
+                            CurrentState.DELETING
+                    );
+            case DELETING, DELETED -> {
+                // Idempotent
+            }
+
+            default -> throw new IllegalStateException(
+                    "Cannot delete instance from "
+                            + instance.getCurrentState()
+            );
         }
     }
 
@@ -161,6 +186,21 @@ public class InstanceLifecycleService {
     }
 
     @Transactional
+    public void completeDelete(ClaimedTask claimedTask, boolean resourceMissing) {
+        Instance instance = assertToken(claimedTask);
+
+        if (instance.getDesiredState() != DesiredState.DELETED) {
+            return;
+        }
+        if (instance.getCurrentState() == CurrentState.DELETING) {
+            stateMachine.transitionIfNecessary(instance, CurrentState.DELETED);
+        }
+        if (instance.getCurrentState() == CurrentState.DELETED || resourceMissing) {
+            instance.clearContainer();
+        }
+    }
+
+    @Transactional
     public void completeStartFromReconciliation(UUID instanceId, String containerId) {
         Instance instance = instanceRepository.findByIdForUpdate(instanceId)
                 .orElseThrow(() -> new ResourceNotFoundException("Instance not found: " + instanceId));
@@ -188,6 +228,27 @@ public class InstanceLifecycleService {
             stateMachine.transitionIfNecessary(instance, CurrentState.STOPPED);
         }
         if (resourceMissing) {
+            instance.clearContainer();
+        }
+    }
+
+    @Transactional
+    public void completeDeleteFromReconciliation(
+            UUID instanceId,
+            boolean resourceMissing){
+        Instance instance = instanceRepository
+                .findByIdForUpdate(instanceId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Instance not found: " + instanceId
+                        ));
+        if (instance.getDesiredState() != DesiredState.DELETED) {
+            return;
+        }
+        if (instance.getCurrentState() == CurrentState.DELETING) {
+            stateMachine.transitionIfNecessary(instance, CurrentState.DELETED);
+        }
+        if (instance.getCurrentState() == CurrentState.DELETED || resourceMissing) {
             instance.clearContainer();
         }
     }

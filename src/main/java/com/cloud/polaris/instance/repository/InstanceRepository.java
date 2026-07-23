@@ -66,5 +66,18 @@ public interface InstanceRepository extends JpaRepository<Instance, UUID> {
             @Param("desiredState") DesiredState desiredState,
             Pageable pageable
     );
+
+    @Query("""
+        select i.id
+        from Instance i
+        where i.currentState = :currentState
+          and i.desiredState = :desiredState
+        order by i.updatedAt
+        """)
+    List<UUID> findInstanceIdsForDeleteReconciliation(
+            @Param("currentState") CurrentState currentState,
+            @Param("desiredState") DesiredState desiredState,
+            Pageable pageable
+    );
 }
 
