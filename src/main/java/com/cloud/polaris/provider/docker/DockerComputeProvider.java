@@ -6,6 +6,8 @@ import com.cloud.polaris.provider.ProviderResource;
 import com.cloud.polaris.provider.ProviderResourceStatus;
 import com.github.dockerjava.api.DockerClient;
 import com.github.dockerjava.api.command.CreateContainerResponse;
+import com.github.dockerjava.api.command.InspectContainerResponse;
+import com.github.dockerjava.api.exception.NotModifiedException;
 import com.github.dockerjava.api.model.Container;
 import com.github.dockerjava.api.model.HostConfig;
 import lombok.RequiredArgsConstructor;
@@ -40,7 +42,17 @@ public class DockerComputeProvider implements ComputeProvider {
 
     @Override
     public void start(String providerResourceId) {
-        dockerClient.startContainerCmd(providerResourceId).exec();
+        try{
+            InspectContainerResponse container = dockerClient.inspectContainerCmd(providerResourceId).exec();
+
+            String status = container.getState().getStatus();
+            if ("running".equalsIgnoreCase(status)) {
+                return;
+            }
+            dockerClient.startContainerCmd(providerResourceId).exec();
+        }catch (NotModifiedException e){
+            // Container đã running
+        }
     }
 
     @Override

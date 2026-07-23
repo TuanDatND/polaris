@@ -3,6 +3,7 @@ package com.cloud.polaris.task.service.failure;
 import com.cloud.polaris.task.domain.ClaimedTask;
 import com.cloud.polaris.task.domain.TaskType;
 import com.cloud.polaris.task.service.TaskFailureCompensationService;
+import com.cloud.polaris.task.service.TaskStateService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -10,7 +11,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class StartTaskFailureHandler implements TaskFailureHandler {
 
-    private final TaskFailureCompensationService taskFailureCompensationService;
+    private final TaskStateService taskStateService;
 
     @Override
     public TaskType supportedType() {
@@ -19,6 +20,6 @@ public class StartTaskFailureHandler implements TaskFailureHandler {
 
     @Override
     public void handle(ClaimedTask task, Exception exception) {
-
+        taskStateService.markFailed(task, exception.getMessage());
     }
 }

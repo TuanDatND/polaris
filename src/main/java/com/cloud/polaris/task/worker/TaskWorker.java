@@ -133,8 +133,8 @@ public class TaskWorker {
                     TimeUnit.SECONDS
             )){
                 log.warn("Task workers did not finish in time. " + "Interrupting them.");
+                taskWorkerExecutor.shutdownNow();
             }
-            taskWorkerExecutor.shutdownNow();
         }catch (InterruptedException exception){
             Thread.currentThread().interrupt();
             taskWorkerExecutor.shutdownNow();

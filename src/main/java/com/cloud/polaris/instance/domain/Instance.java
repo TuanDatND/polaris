@@ -75,6 +75,10 @@ public class Instance {
         return instance;
     }
 
+    public void requestStart() {
+        this.desiredState = DesiredState.RUNNING;
+    }
+
     public void requestStop() {
         this.desiredState = DesiredState.STOPPED;
     }
