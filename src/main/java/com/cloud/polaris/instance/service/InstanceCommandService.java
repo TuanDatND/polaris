@@ -63,6 +63,52 @@ public class InstanceCommandService {
     }
 
     @Transactional
+    public InstanceResponse startInstance(UUID tenantId, UUID instanceId) {
+        Tenant tenant = tenantRepository.findByIdForUpdate(tenantId).orElseThrow(() -> new ResourceNotFoundException("Tenant not found: " + tenantId));
+
+        Instance instance = instanceRepository .findByIdAndTenantIdForUpdate(instanceId, tenantId).orElseThrow(() -> new ResourceNotFoundException("Instance not found: " + instanceId));
+
+        CurrentState currentState = instance.getCurrentState();
+
+        if (currentState == CurrentState.DELETED
+                || currentState == CurrentState.DELETING) {
+            throw new IllegalStateException(
+                    "Cannot start deleted instance: " + instanceId
+            );
+        }
+
+        if (instance.getDesiredState() == DesiredState.RUNNING
+                && (currentState == CurrentState.RUNNING
+                || currentState == CurrentState.STARTING)) {
+            return InstanceResponse.from(instance);
+        }
+
+
+        if (currentState == CurrentState.STOPPING) {
+            throw new IllegalStateException("Cannot start instance while it is stopping: " + instanceId);
+        }
+
+        if (currentState != CurrentState.STOPPED) {
+            throw new IllegalStateException("Cannot start instance while it is not stopped: " + instanceId);
+        }
+
+        boolean startTaskExists = taskRepository.existsByInstance_IdAndTypeAndStatusIn(instanceId, TaskType.CREATE_INSTANCE, Set.of(TaskStatus.QUEUED, TaskStatus.RUNNING));
+
+        if (startTaskExists) {
+            return InstanceResponse.from(instance);
+        }
+
+        instance.requestStart();
+
+        taskRepository.save(Task.startInstanceTask(
+                tenant,
+                instance,
+                UUID.randomUUID()
+        ));
+        return InstanceResponse.from(instance);
+    }
+
+    @Transactional
     public InstanceResponse stopInstance(UUID tenantId, UUID instanceId) {
         Tenant tenant = tenantRepository.findByIdForUpdate(tenantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Tenant not found: " + tenantId));
@@ -99,8 +145,7 @@ public class InstanceCommandService {
         instance.requestStop();
 
         if (instance.getCurrentState() == CurrentState.PENDING
-                || instance.getCurrentState() == CurrentState.PROVISIONING
-                || instance.getCurrentState() == CurrentState.STARTING) {
+                || instance.getCurrentState() == CurrentState.PROVISIONING) {
             // Chỉ ghi desired state cho ông cố start/create instance ổng dừng tạo là okee
             return InstanceResponse.from(instance);
         }

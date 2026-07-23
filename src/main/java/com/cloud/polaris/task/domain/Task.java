@@ -90,6 +90,24 @@ public class Task {
         return task;
     }
 
+    public static Task startInstanceTask(Tenant tenant, Instance instance, UUID operationId) {
+        Task task = new Task();
+        task.tenant = tenant;
+        task.instance = instance;
+        task.type = TaskType.START_INSTANCE;
+        task.status = TaskStatus.QUEUED;
+        task.attempts = 0;
+        task.maxAttempts = 5;
+        task.availableAt = Instant.now();
+        task.idempotencyKey =
+                "start-instance:"
+                        + instance.getId()
+                        + ":"
+                        + operationId;
+
+        return task;
+    }
+
     public static Task stopInstanceTask(Tenant tenant, Instance instance, JsonNode payload, UUID operationId) {
         Task task = new Task();
         task.tenant = tenant;

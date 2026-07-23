@@ -11,7 +11,6 @@ import com.cloud.polaris.instance.repository.InstanceRepository;
 import com.cloud.polaris.task.domain.ClaimedTask;
 import com.cloud.polaris.task.domain.Task;
 import com.cloud.polaris.task.repository.TaskRepository;
-import com.cloud.polaris.task.service.TaskStateService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,7 +24,6 @@ public class InstanceLifecycleService {
     private final InstanceRepository instanceRepository;
     private final InstanceStateMachine stateMachine;
     private final TaskRepository taskRepository;
-    private final TaskStateService taskStateService;
 
     @Transactional
     public void ensureProvisioning(UUID instanceId) {
@@ -67,6 +65,23 @@ public class InstanceLifecycleService {
     }
 
     @Transactional
+    public void ensureStarting(ClaimedTask claimedTask) {
+        Instance instance = assertToken(claimedTask);
+
+        if (instance.getDesiredState() != DesiredState.RUNNING) {
+            return;
+        }
+
+        switch (instance.getCurrentState()) {
+            case STOPPED -> stateMachine.transitionIfNecessary(instance, CurrentState.STARTING);
+            case STARTING, RUNNING -> {
+                //Idempotent
+            }
+            default -> throw new IllegalStateException("Cannot start instance from " + instance.getCurrentState());
+        }
+    }
+
+    @Transactional
     public void markStopFailed(ClaimedTask claimedTask, String reason) {
         Instance instance = assertToken(claimedTask);
 
@@ -95,7 +110,7 @@ public class InstanceLifecycleService {
         }
 
         switch (instance.getCurrentState()) {
-            case RUNNING -> stateMachine.transitionIfNecessary(instance, CurrentState.STOPPING);
+            case RUNNING, STARTING -> stateMachine.transitionIfNecessary(instance, CurrentState.STOPPING);
             case STOPPING, STOPPED -> {
                 // idempotent
             }
@@ -114,7 +129,7 @@ public class InstanceLifecycleService {
         }
 
         switch (instance.getCurrentState()) {
-            case PENDING, PROVISIONING, STOPPING -> stateMachine.transitionIfNecessary(
+            case PENDING, PROVISIONING,STARTING, STOPPING -> stateMachine.transitionIfNecessary(
                     instance,
                     CurrentState.STOPPED
             );
@@ -142,6 +157,24 @@ public class InstanceLifecycleService {
 
         if (resourceMissing) {
             instance.clearContainer();
+        }
+    }
+
+    @Transactional
+    public void completeStartFromReconciliation(UUID instanceId, String containerId) {
+        Instance instance = instanceRepository.findByIdForUpdate(instanceId)
+                .orElseThrow(() -> new ResourceNotFoundException("Instance not found: " + instanceId));
+
+        if (instance.getDesiredState() != DesiredState.RUNNING) {
+            return;
+        }
+
+        if (instance.getCurrentState() == CurrentState.STARTING) {
+            stateMachine.transitionIfNecessary(instance, CurrentState.RUNNING);
+        }
+
+        if (instance.getCurrentState() == CurrentState.RUNNING) {
+            instance.attachContainer(containerId);
         }
     }
 

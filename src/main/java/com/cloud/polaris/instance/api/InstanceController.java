@@ -32,6 +32,14 @@ public class InstanceController {
         return instanceCommandService.createInstance(tenantId, createInstanceRequest);
     }
 
+    @PostMapping("/{instanceId}/start")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public InstanceResponse startInstance(
+            @RequestHeader("X-Tenant-Id") UUID tenantId,
+            @PathVariable UUID instanceId){
+        return instanceCommandService.startInstance(tenantId, instanceId);
+    }
+
     @PostMapping("/{instanceId}/stop")
     @ResponseStatus(HttpStatus.ACCEPTED)
     public InstanceResponse stopInstance(
