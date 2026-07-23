@@ -12,6 +12,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 public interface InstanceRepository extends JpaRepository<Instance, UUID> {
@@ -70,12 +71,12 @@ public interface InstanceRepository extends JpaRepository<Instance, UUID> {
     @Query("""
         select i.id
         from Instance i
-        where i.currentState = :currentState
-          and i.desiredState = :desiredState
+        where i.currentState in :currentState
+          and i.desiredState = :desiredState and i.quotaReleased = false
         order by i.updatedAt
         """)
     List<UUID> findInstanceIdsForDeleteReconciliation(
-            @Param("currentState") CurrentState currentState,
+            @Param("currentState") Set<CurrentState> currentState,
             @Param("desiredState") DesiredState desiredState,
             Pageable pageable
     );

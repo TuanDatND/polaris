@@ -16,6 +16,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 @Component
@@ -30,7 +31,10 @@ public class DeleteReconciler {
 
     @Scheduled(fixedDelay = 30_000)
     public void reconcile() {
-        List<UUID> instanceIds = instanceRepository.findInstanceIdsForDeleteReconciliation(CurrentState.DELETING, DesiredState.DELETED, PageRequest.of(0, 50));
+        List<UUID> instanceIds = instanceRepository.findInstanceIdsForDeleteReconciliation(Set.of(
+                CurrentState.DELETING,
+                CurrentState.DELETED
+        ), DesiredState.DELETED, PageRequest.of(0, 50));
 
         for (UUID instanceId : instanceIds) {
             try {
