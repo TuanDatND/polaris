@@ -4,6 +4,7 @@ import com.cloud.polaris.common.exception.ResourceNotFoundException;
 import com.cloud.polaris.instance.domain.DesiredState;
 import com.cloud.polaris.instance.domain.Instance;
 import com.cloud.polaris.instance.repository.InstanceRepository;
+import com.cloud.polaris.instance.service.InstanceCompensationService;
 import com.cloud.polaris.instance.service.InstanceLifecycleService;
 import com.cloud.polaris.provider.ComputeProvider;
 import com.cloud.polaris.provider.ProviderResource;
@@ -22,6 +23,7 @@ public class DeleteInstanceHandler implements TaskHandler {
     private final InstanceRepository instanceRepository;
     private final InstanceLifecycleService instanceLifecycleService;
     private final ComputeProvider computeProvider;
+    private final InstanceCompensationService cleanupService;
 
     @Override
     public TaskType supportedType() {
@@ -43,7 +45,7 @@ public class DeleteInstanceHandler implements TaskHandler {
                         claimedTask.instanceId()
                 );
         if (resource.isEmpty()){
-            instanceLifecycleService.completeDelete(claimedTask, true);
+            finalizeDelete(claimedTask);
             return;
         }
 
@@ -61,11 +63,17 @@ public class DeleteInstanceHandler implements TaskHandler {
                         claimedTask.instanceId()
                 );
         if (afterDelete.isEmpty()) {
-            instanceLifecycleService.completeDelete(claimedTask, true);
+            finalizeDelete(claimedTask);
             return;
         }
         throw new IllegalStateException("Provider resource still exists after delete");
+    }
 
+    private void finalizeDelete(ClaimedTask task) {
+        instanceLifecycleService.completeDelete(task, true);
 
+        cleanupService.releaseQuotaIfCleanupCompleted(
+                task.instanceId()
+        );
     }
 }
