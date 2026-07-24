@@ -28,7 +28,9 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-validation")
 
     // Security
-//    implementation("org.springframework.boot:spring-boot-starter-security")
+    implementation("org.springframework.boot:spring-boot-starter-security")
+    implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server")
+    implementation("org.springframework.security:spring-security-oauth2-authorization-server:1.5.8")
 
     // Database
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
@@ -80,7 +82,7 @@ dependencies {
 
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 
-//    implementation("org.springframework.boot:spring-boot-starter-data-redis")
+    implementation("org.springframework.boot:spring-boot-starter-data-redis")
 //    implementation("org.springframework.boot:spring-boot-starter-cache")
 }
 
