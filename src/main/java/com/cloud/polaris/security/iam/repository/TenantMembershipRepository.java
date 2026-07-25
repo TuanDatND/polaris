@@ -1,8 +1,8 @@
 package com.cloud.polaris.security.iam.repository;
 
-import com.cloud.polaris.security.iam.domain.MembershipId;
-import com.cloud.polaris.security.iam.domain.MembershipStatus;
-import com.cloud.polaris.security.iam.domain.TenantMembership;
+import com.cloud.polaris.security.iam.domain.id.MembershipId;
+import com.cloud.polaris.security.iam.domain.enums.MembershipStatus;
+import com.cloud.polaris.security.iam.domain.entity.TenantMembership;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;

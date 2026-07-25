@@ -1,5 +1,7 @@
-package com.cloud.polaris.security.iam.domain;
+package com.cloud.polaris.security.iam.domain.entity;
 
+import com.cloud.polaris.security.iam.domain.id.MembershipId;
+import com.cloud.polaris.security.iam.domain.enums.MembershipStatus;
 import com.cloud.polaris.security.user.domain.AppUser;
 import com.cloud.polaris.tenant.domain.Tenant;
 import jakarta.persistence.*;

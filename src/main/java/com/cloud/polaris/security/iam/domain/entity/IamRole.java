@@ -1,4 +1,4 @@
-package com.cloud.polaris.security.iam.domain;
+package com.cloud.polaris.security.iam.domain.entity;
 
 import com.cloud.polaris.tenant.domain.Tenant;
 import jakarta.persistence.*;
@@ -19,7 +19,7 @@ public class IamRole {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @ManyToOne(FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "tenant_id")
     private Tenant tenant;
 
@@ -42,6 +42,7 @@ public class IamRole {
         IamRole role = new IamRole();
         role.name = name;
         role.description = description;
+        role.managed = true;
         return role;
     }
 
@@ -50,6 +51,7 @@ public class IamRole {
         role.tenant = tenant;
         role.name = name;
         role.description = description;
+        role.managed = false;
         return role;
     }
 

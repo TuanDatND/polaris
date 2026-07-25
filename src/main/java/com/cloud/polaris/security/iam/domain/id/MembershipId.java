@@ -1,4 +1,4 @@
-package com.cloud.polaris.security.iam.domain;
+package com.cloud.polaris.security.iam.domain.id;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
