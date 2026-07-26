@@ -32,4 +32,16 @@ public class TenantMembership {
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
     private MembershipStatus status;
+
+    public static TenantMembership create(Tenant tenant, AppUser user) {
+        TenantMembership tenantMembership = new TenantMembership();
+        tenantMembership.id = new MembershipId(
+                user.getId(),
+                tenant.getId()
+        );
+        tenantMembership.tenant = tenant;
+        tenantMembership.user = user;
+        tenantMembership.status = MembershipStatus.ACTIVE;
+        return tenantMembership;
+    }
 }
