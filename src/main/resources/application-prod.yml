@@ -20,6 +20,11 @@ spring:
   flyway:
     enabled: true
 
+security:
+  oauth2:
+    issuer: ${SECURITY_OAUTH2_ISSUER}
+    frontend-redirect-uri: ${FRONTEND_REDIRECT_URI}
+
 jwt:
   secret: ${JWT_SECRET}
 

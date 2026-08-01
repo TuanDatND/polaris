@@ -20,6 +20,11 @@ spring:
   flyway:
     enabled: ${SPRING_FLYWAY_ENABLED:true}
 
+security:
+  oauth2:
+    issuer: ${SECURITY_OAUTH2_ISSUER:http://localhost:8080}
+    frontend-redirect-uri: ${FRONTEND_REDIRECT_URI:http://localhost:3000/oauth2/callback}
+
 jwt:
   secret: ${JWT_SECRET:NGUYEN-DINH-TUAN-DAT-SWE-030205}
 
