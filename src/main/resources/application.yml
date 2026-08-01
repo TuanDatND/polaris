@@ -26,6 +26,8 @@ spring:
     locations: classpath:db/migration
     baseline-on-migrate: true
 
+security:
+  password-strength: ${SECURITY_PASSWORD_STRENGTH:12}
 
 server:
   port: ${SERVER_PORT:8080}

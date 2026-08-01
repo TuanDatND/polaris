@@ -2,6 +2,7 @@ package com.cloud.polaris.security.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractAuthenticationFilterConfigurer;
@@ -12,15 +13,12 @@ import org.springframework.security.web.SecurityFilterChain;
 public class SecurityConfig {
 
     @Bean
+    @Order(2)
     public SecurityFilterChain springSecurityFilterChain(HttpSecurity http, DaoAuthenticationProvider authenticationProvider) throws Exception {
         http.authenticationProvider(authenticationProvider)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/api/v1/auth/**",
-                                "/oauth2/authorize",
-                                "/oauth2/token",
-                                "/oauth2/jwks",
-                                "/.well-known/**",
                                 "/login",
                                 "/actuator/health")
                         .permitAll()
@@ -31,3 +29,4 @@ public class SecurityConfig {
         return http.build();
     }
 }
+
