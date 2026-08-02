@@ -40,4 +40,5 @@ out/
 AGENTS.md
 docs/*
 !docs/AI_PROJECT_CONTEXT.md
+!docs/DECLARATIVE_RECONCILIATION_V3.md
 .agents

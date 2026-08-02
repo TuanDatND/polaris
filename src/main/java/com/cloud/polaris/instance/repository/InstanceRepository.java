@@ -56,12 +56,12 @@ public interface InstanceRepository extends JpaRepository<Instance, UUID> {
     );
 
     @Query("""
-        select i.id
-        from Instance i
-        where i.currentState = :currentState
-          and i.desiredState = :desiredState
-        order by i.updatedAt
-        """)
+            select i.id
+            from Instance i
+            where i.currentState = :currentState
+              and i.desiredState = :desiredState
+            order by i.updatedAt
+            """)
     List<UUID> findInstanceIdsForStartReconciliation(
             @Param("currentState") CurrentState currentState,
             @Param("desiredState") DesiredState desiredState,
@@ -69,16 +69,25 @@ public interface InstanceRepository extends JpaRepository<Instance, UUID> {
     );
 
     @Query("""
-        select i.id
-        from Instance i
-        where i.currentState in :currentState
-          and i.desiredState = :desiredState and i.quotaReleased = false
-        order by i.updatedAt
-        """)
+            select i.id
+            from Instance i
+            where i.currentState in :currentState
+              and i.desiredState = :desiredState and i.quotaReleased = false
+            order by i.updatedAt
+            """)
     List<UUID> findInstanceIdsForDeleteReconciliation(
             @Param("currentState") Set<CurrentState> currentState,
             @Param("desiredState") DesiredState desiredState,
             Pageable pageable
     );
+
+    @Query(value = """
+            SELECT i.id
+            FROM instances i
+            WHERE i.desired_state <> i.current_state
+              AND i.current_state <> 'DELETED'
+            ORDER BY i.updated_at
+            """, nativeQuery = true)
+    List<UUID> findNonConvergedInstanceIds(Pageable pageable);
 }
 

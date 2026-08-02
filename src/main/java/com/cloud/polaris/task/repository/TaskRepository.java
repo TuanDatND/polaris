@@ -10,10 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
-import java.util.Collection;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 public interface TaskRepository extends JpaRepository<Task, UUID> {
 
@@ -50,4 +47,6 @@ public interface TaskRepository extends JpaRepository<Task, UUID> {
             TaskType type,
             Collection<TaskStatus> statuses
     );
+
+    boolean existsByInstance_IdAndStatusIn(UUID id, Set<TaskStatus> queued);
 }

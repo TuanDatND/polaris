@@ -66,7 +66,7 @@ public class InstanceCommandService {
     public InstanceResponse startInstance(UUID tenantId, UUID instanceId) {
         Tenant tenant = tenantRepository.findByIdForUpdate(tenantId).orElseThrow(() -> new ResourceNotFoundException("Tenant not found: " + tenantId));
 
-        Instance instance = instanceRepository .findByIdAndTenantIdForUpdate(instanceId, tenantId).orElseThrow(() -> new ResourceNotFoundException("Instance not found: " + instanceId));
+        Instance instance = instanceRepository.findByIdAndTenantIdForUpdate(instanceId, tenantId).orElseThrow(() -> new ResourceNotFoundException("Instance not found: " + instanceId));
 
         CurrentState currentState = instance.getCurrentState();
 
@@ -103,7 +103,10 @@ public class InstanceCommandService {
         taskRepository.save(Task.startInstanceTask(
                 tenant,
                 instance,
-                UUID.randomUUID()
+                "start-instance:"
+                        + instance.getId()
+                        + ":"
+                        + UUID.randomUUID()
         ));
         return InstanceResponse.from(instance);
     }
@@ -150,8 +153,12 @@ public class InstanceCommandService {
             return InstanceResponse.from(instance);
         }
         taskRepository.save(
-                Task.stopInstanceTask(tenant, instance, null, UUID.randomUUID())
-        );
+                Task.stopInstanceTask(tenant, instance, null,
+                        "stop-instance:"
+                                + instance.getId()
+                                + ":"
+                                + UUID.randomUUID()
+                ));
         return InstanceResponse.from(instance);
     }
 
@@ -162,7 +169,7 @@ public class InstanceCommandService {
         Instance instance = instanceRepository.findByIdAndTenantIdForUpdate(instanceId, tenantId).orElseThrow(() -> new ResourceNotFoundException("Instance not found: " + instanceId));
 
         CurrentState currentState = instance.getCurrentState();
-        if (currentState == CurrentState.DELETED || currentState == CurrentState.DELETING){
+        if (currentState == CurrentState.DELETED || currentState == CurrentState.DELETING) {
             return InstanceResponse.from(instance);
         }
 
@@ -186,7 +193,10 @@ public class InstanceCommandService {
         taskRepository.save(Task.deleteInstanceTask(
                 tenant,
                 instance,
-                UUID.randomUUID()
+                "delete-instance:"
+                        + instance.getId()
+                        + ":"
+                        + UUID.randomUUID()
         ));
         return InstanceResponse.from(instance);
     }
