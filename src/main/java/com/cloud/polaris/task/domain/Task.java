@@ -90,7 +90,7 @@ public class Task {
         return task;
     }
 
-    public static Task startInstanceTask(Tenant tenant, Instance instance, UUID operationId) {
+    public static Task startInstanceTask(Tenant tenant, Instance instance, String idempotencyKey) {
         Task task = new Task();
         task.tenant = tenant;
         task.instance = instance;
@@ -99,16 +99,11 @@ public class Task {
         task.attempts = 0;
         task.maxAttempts = 5;
         task.availableAt = Instant.now();
-        task.idempotencyKey =
-                "start-instance:"
-                        + instance.getId()
-                        + ":"
-                        + operationId;
-
+        task.idempotencyKey = idempotencyKey;
         return task;
     }
 
-    public static Task stopInstanceTask(Tenant tenant, Instance instance, JsonNode payload, UUID operationId) {
+    public static Task stopInstanceTask(Tenant tenant, Instance instance, JsonNode payload, String idempotencyKey) {
         Task task = new Task();
         task.tenant = tenant;
         task.instance = instance;
@@ -117,17 +112,13 @@ public class Task {
         task.attempts = 0;
         task.maxAttempts = 5;
         task.availableAt = Instant.now();
-        task.idempotencyKey =
-                "stop-instance:"
-                        + instance.getId()
-                        + ":"
-                        + operationId;
+        task.idempotencyKey = idempotencyKey;
         task.payload = payload;
 
         return task;
     }
 
-    public static Task deleteInstanceTask(Tenant tenant, Instance instance, UUID operationId) {
+    public static Task deleteInstanceTask(Tenant tenant, Instance instance, String idempotencyKey) {
         Task task = new Task();
         task.tenant = tenant;
         task.instance = instance;
@@ -136,12 +127,7 @@ public class Task {
         task.attempts = 0;
         task.maxAttempts = 5;
         task.availableAt = Instant.now();
-        task.idempotencyKey =
-                "delete-instance:"
-                        + instance.getId()
-                        + ":"
-                        + operationId;
-
+        task.idempotencyKey =idempotencyKey;
         return task;
     }
 
