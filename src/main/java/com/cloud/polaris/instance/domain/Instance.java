@@ -1,5 +1,6 @@
 package com.cloud.polaris.instance.domain;
 
+import com.cloud.polaris.reconcile.domain.ProviderObservedState;
 import com.cloud.polaris.tenant.domain.Tenant;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -21,6 +22,19 @@ public class Instance {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "tenant_id", nullable = false)
     private Tenant tenant;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "last_observed_state", nullable = false)
+    private ProviderObservedState lastObservedState;
+
+    @Column(name = "last_observed_at")
+    private Instant lastObservedAt;
+
+    @Column(name = "generation", nullable = false)
+    private long generation;
+
+    @Column(name = "observed_generation", nullable = false)
+    private long observedGeneration;
 
     @Column(name = "name", nullable = false)
     private String name;
@@ -70,20 +84,26 @@ public class Instance {
         instance.cpuAllocated = cpuAllocated;
         instance.ramMb = ramMb;
 
+        instance.generation = 1L;
+        instance.observedGeneration = 0L;
+        instance.lastObservedState = ProviderObservedState.UNKNOWN;
+
         instance.currentState = CurrentState.PENDING;
         instance.desiredState = DesiredState.RUNNING;
         return instance;
     }
 
-    public void requestStart() {
-        this.desiredState = DesiredState.RUNNING;
+
+    public boolean requestStart() {
+        return changeDesiredState(DesiredState.RUNNING);
     }
 
-    public void requestStop() {
-        this.desiredState = DesiredState.STOPPED;
+    public boolean requestStop() {
+        return changeDesiredState(DesiredState.STOPPED);
     }
-    public void requestDelete() {
-        this.desiredState = DesiredState.DELETED;
+
+    public boolean requestDelete() {
+        return changeDesiredState(DesiredState.DELETED);
     }
 
     void changeCurrentState(CurrentState currentState) {
@@ -110,4 +130,41 @@ public class Instance {
         quotaReleased = true;
         return true;
     }
+
+    public void recordObservation(
+            ProviderObservedState observedState,
+            Instant observedAt
+    ) {
+        this.lastObservedState = observedState;
+        this.lastObservedAt = observedAt;
+    }
+
+    public void markObservedGeneration(long generation) {
+        if (generation > this.generation) {
+            throw new IllegalArgumentException(
+                    "Observed generation cannot exceed desired generation"
+            );
+        }
+
+        this.observedGeneration =
+                Math.max(this.observedGeneration, generation);
+    }
+
+    private boolean changeDesiredState(DesiredState nextState) {
+        if (desiredState == DesiredState.DELETED && nextState != DesiredState.DELETED) {
+            throw new IllegalStateException(
+                    "Cannot change desired state after deletion"
+            );
+        }
+
+        if (desiredState == nextState) {
+            return false;
+        }
+
+        desiredState = nextState;
+        generation++;
+        return true;
+    }
+
+
 }
