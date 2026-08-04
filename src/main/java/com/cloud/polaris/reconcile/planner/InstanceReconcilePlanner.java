@@ -9,6 +9,7 @@ import com.cloud.polaris.reconcile.domain.ReconcileDecision;
 import java.util.Objects;
 
 public final class InstanceReconcilePlanner {
+
     public ReconcileDecision plan(InstanceSnapshot snapshot) {
         Objects.requireNonNull(snapshot, "snapshot must not be null");
 

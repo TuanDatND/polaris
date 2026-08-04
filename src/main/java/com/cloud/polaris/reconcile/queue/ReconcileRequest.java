@@ -139,7 +139,9 @@ public class ReconcileRequest {
     }
 
     public void assertClaimToken(UUID token) {
-        if (!Objects.equals(claimToken, token)) {
+        if (status != ReconcileRequestStatus.RUNNING
+                || token == null
+                || !Objects.equals(claimToken, token)) {
             throw new IllegalStateException(
                     "Stale reconcile request owner"
             );

@@ -16,6 +16,12 @@ public class ReconcileQueueService {
 
     private final ReconcileRequestRepository reconcileRequestRepository;
 
+    /*wake
+        Chưa có request → tạo một row READY.
+        Đã có request READY → giữ một row duy nhất, cập nhật requested_generation lớn nhất.
+        Đang RUNNING → không cướp claim/lease của worker hiện tại; chỉ ghi nhận generation mới để worker biết cần reconcile tiếp sau khi xong.
+        Nếu request đang BLOCKED hoặc đã được schedule resync → đưa nó về READY để xử lý sớm.
+    */
     @Transactional
     public void wake(UUID instanceId, long generation) {
         Instant now = Instant.now();
@@ -40,7 +46,7 @@ public class ReconcileQueueService {
     }
 
     @Transactional
-    public int recoverExpiredLeases(int limit){
+    public int recoverExpiredLeases(int limit) {
         Instant now = Instant.now();
 
         List<ReconcileRequest> expired = reconcileRequestRepository.findExpiredLeasesForUpdate(now, limit);
@@ -50,25 +56,25 @@ public class ReconcileQueueService {
     }
 
     @Transactional
-    public void requeue(ClaimedReconcileRequest claimed, Instant nextAvailableAt, String error){
+    public void requeue(ClaimedReconcileRequest claimed, Instant nextAvailableAt, String error) {
         ReconcileRequest request = lockOwned(claimed);
         request.requeue(nextAvailableAt, error);
     }
 
     @Transactional
-    public void scheduleResync(ClaimedReconcileRequest claimed, Instant nextAvailableAt){
+    public void scheduleResync(ClaimedReconcileRequest claimed, Instant nextAvailableAt) {
         ReconcileRequest request = lockOwned(claimed);
         request.scheduleResync(nextAvailableAt);
     }
 
     @Transactional
-    public void block(ClaimedReconcileRequest claimed, String error){
+    public void block(ClaimedReconcileRequest claimed, String error) {
         ReconcileRequest request = lockOwned(claimed);
         request.block(error);
     }
 
-    private ReconcileRequest lockOwned(ClaimedReconcileRequest claimed){
-        ReconcileRequest request = reconcileRequestRepository.findByInstanceIdForUpdate(claimed.instanceId()).orElseThrow(()-> new ResourceNotFoundException("Reconcile request not found: " + claimed.instanceId()));
+    private ReconcileRequest lockOwned(ClaimedReconcileRequest claimed) {
+        ReconcileRequest request = reconcileRequestRepository.findByInstanceIdForUpdate(claimed.instanceId()).orElseThrow(() -> new ResourceNotFoundException("Reconcile request not found: " + claimed.instanceId()));
         request.assertClaimToken(claimed.claimToken());
         return request;
     }
