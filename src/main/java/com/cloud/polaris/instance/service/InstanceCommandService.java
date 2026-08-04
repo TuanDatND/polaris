@@ -5,12 +5,10 @@ import com.cloud.polaris.common.exception.ResourceNotFoundException;
 import com.cloud.polaris.instance.api.CreateInstanceRequest;
 import com.cloud.polaris.instance.api.InstanceResponse;
 import com.cloud.polaris.instance.domain.CurrentState;
-import com.cloud.polaris.instance.domain.DesiredState;
 import com.cloud.polaris.instance.domain.Instance;
 import com.cloud.polaris.instance.repository.InstanceRepository;
+import com.cloud.polaris.reconcile.queue.ReconcileQueueService;
 import com.cloud.polaris.task.domain.Task;
-import com.cloud.polaris.task.domain.TaskStatus;
-import com.cloud.polaris.task.domain.TaskType;
 import com.cloud.polaris.task.repository.TaskRepository;
 import com.cloud.polaris.tenant.domain.Tenant;
 import com.cloud.polaris.tenant.repository.TenantRepository;
@@ -20,13 +18,13 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Set;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class InstanceCommandService {
 
+    private final ReconcileQueueService reconcileQueueService;
     private final InstanceRepository instanceRepository;
     private final TenantRepository tenantRepository;
     private final TaskRepository taskRepository;
@@ -66,48 +64,18 @@ public class InstanceCommandService {
     public InstanceResponse startInstance(UUID tenantId, UUID instanceId) {
         Tenant tenant = tenantRepository.findByIdForUpdate(tenantId).orElseThrow(() -> new ResourceNotFoundException("Tenant not found: " + tenantId));
 
-        Instance instance = instanceRepository.findByIdAndTenantIdForUpdate(instanceId, tenantId).orElseThrow(() -> new ResourceNotFoundException("Instance not found: " + instanceId));
+        Instance instance = instanceRepository.findByIdAndTenantIdForUpdate(instanceId, tenant.getId()).orElseThrow(() -> new ResourceNotFoundException("Instance not found: " + instanceId));
 
         CurrentState currentState = instance.getCurrentState();
 
-        if (currentState == CurrentState.DELETED
-                || currentState == CurrentState.DELETING) {
+        if (currentState == CurrentState.DELETED) {
             throw new IllegalStateException(
                     "Cannot start deleted instance: " + instanceId
             );
         }
 
-        if (instance.getDesiredState() == DesiredState.RUNNING
-                && (currentState == CurrentState.RUNNING
-                || currentState == CurrentState.STARTING)) {
-            return InstanceResponse.from(instance);
-        }
-
-
-        if (currentState == CurrentState.STOPPING) {
-            throw new IllegalStateException("Cannot start instance while it is stopping: " + instanceId);
-        }
-
-        if (currentState != CurrentState.STOPPED) {
-            throw new IllegalStateException("Cannot start instance while it is not stopped: " + instanceId);
-        }
-
-        boolean startTaskExists = taskRepository.existsByInstance_IdAndTypeAndStatusIn(instanceId, TaskType.START_INSTANCE, Set.of(TaskStatus.QUEUED, TaskStatus.RUNNING));
-
-        if (startTaskExists) {
-            return InstanceResponse.from(instance);
-        }
-
         instance.requestStart();
-
-        taskRepository.save(Task.startInstanceTask(
-                tenant,
-                instance,
-                "start-instance:"
-                        + instance.getId()
-                        + ":"
-                        + UUID.randomUUID()
-        ));
+        reconcileQueueService.wake(instance.getId(), instance.getGeneration());
         return InstanceResponse.from(instance);
     }
 
@@ -116,49 +84,17 @@ public class InstanceCommandService {
         Tenant tenant = tenantRepository.findByIdForUpdate(tenantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Tenant not found: " + tenantId));
 
-        Instance instance = instanceRepository.findByIdAndTenantIdForUpdate(instanceId, tenantId).orElseThrow(() -> new ResourceNotFoundException("Instance not found: " + instanceId));
+        Instance instance = instanceRepository.findByIdAndTenantIdForUpdate(instanceId, tenant.getId()).orElseThrow(() -> new ResourceNotFoundException("Instance not found: " + instanceId));
 
 
-        if (instance.getCurrentState() == CurrentState.DELETED || instance.getCurrentState() == CurrentState.DELETING) {
+        if (instance.getCurrentState() == CurrentState.DELETED) {
             throw new IllegalStateException(
                     "Cannot stop deleted instance: " + instanceId
             );
         }
 
-        if (instance.getDesiredState() == DesiredState.STOPPED
-                && (instance.getCurrentState() == CurrentState.STOPPED
-                || instance.getCurrentState() == CurrentState.STOPPING)) {
-            return InstanceResponse.from(instance);
-        }
-
-        boolean stopTaskExists =
-                taskRepository.existsByInstance_IdAndTypeAndStatusIn(
-                        instanceId,
-                        TaskType.STOP_INSTANCE,
-                        Set.of(
-                                TaskStatus.QUEUED,
-                                TaskStatus.RUNNING
-                        )
-                );
-
-        if (stopTaskExists) {
-            return InstanceResponse.from(instance);
-        }
-
         instance.requestStop();
-
-        if (instance.getCurrentState() == CurrentState.PENDING
-                || instance.getCurrentState() == CurrentState.PROVISIONING) {
-            // Chỉ ghi desired state cho ông cố start/create instance ổng dừng tạo là okee
-            return InstanceResponse.from(instance);
-        }
-        taskRepository.save(
-                Task.stopInstanceTask(tenant, instance, null,
-                        "stop-instance:"
-                                + instance.getId()
-                                + ":"
-                                + UUID.randomUUID()
-                ));
+        reconcileQueueService.wake(instance.getId(), instance.getGeneration());
         return InstanceResponse.from(instance);
     }
 
@@ -166,38 +102,13 @@ public class InstanceCommandService {
     public InstanceResponse deleteInstance(UUID tenantId, UUID instanceId) {
         Tenant tenant = tenantRepository.findByIdForUpdate(tenantId).orElseThrow(() -> new ResourceNotFoundException("Tenant not found: " + tenantId));
 
-        Instance instance = instanceRepository.findByIdAndTenantIdForUpdate(instanceId, tenantId).orElseThrow(() -> new ResourceNotFoundException("Instance not found: " + instanceId));
+        Instance instance = instanceRepository.findByIdAndTenantIdForUpdate(instanceId, tenant.getId()).orElseThrow(() -> new ResourceNotFoundException("Instance not found: " + instanceId));
 
-        CurrentState currentState = instance.getCurrentState();
-        if (currentState == CurrentState.DELETED || currentState == CurrentState.DELETING) {
+        if (instance.getCurrentState() == CurrentState.DELETED) {
             return InstanceResponse.from(instance);
         }
-
-
-        if (currentState != CurrentState.STOPPED) {
-            throw new IllegalStateException("Only STOPPED instance can be deleted:  " + currentState);
-        }
-
-        boolean deleteTaskExists = taskRepository.existsByInstance_IdAndTypeAndStatusIn(
-                instanceId,
-                TaskType.DELETE_INSTANCE,
-                Set.of(TaskStatus.QUEUED, TaskStatus.RUNNING)
-        );
-
-        if (deleteTaskExists) {
-            return InstanceResponse.from(instance);
-        }
-
         instance.requestDelete();
-
-        taskRepository.save(Task.deleteInstanceTask(
-                tenant,
-                instance,
-                "delete-instance:"
-                        + instance.getId()
-                        + ":"
-                        + UUID.randomUUID()
-        ));
+        reconcileQueueService.wake(instance.getId(), instance.getGeneration());
         return InstanceResponse.from(instance);
     }
 }
