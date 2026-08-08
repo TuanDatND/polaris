@@ -55,6 +55,7 @@ public class ReconcilePreparationService {
                 instance.getId(),
                 instance.getGeneration(),
                 decision,
+                observation.state(),
                 observation.providerResourceId()
         );
     }
