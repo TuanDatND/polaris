@@ -8,7 +8,6 @@
 - Docker compute provider abstraction
 - State machine for instance lifecycle safety
 - Reconciliation loop for drift detection and repair
-- Audit log and outbox event pattern
 - Idempotency for safe client retries
 - Metrics and health checks with Actuator, Micrometer and Prometheus
 
