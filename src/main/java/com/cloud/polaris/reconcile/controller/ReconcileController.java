@@ -1,5 +1,6 @@
 package com.cloud.polaris.reconcile.controller;
 
+import com.cloud.polaris.common.exception.StaleReconcileRequestOwnerException;
 import com.cloud.polaris.instance.service.InstanceCompensationService;
 import com.cloud.polaris.reconcile.domain.ProviderObservation;
 import com.cloud.polaris.reconcile.domain.ReconcileDecision;
@@ -28,10 +29,10 @@ public class ReconcileController {
     private final InstanceCompensationService compensationService;
 
     public void reconcile(ClaimedReconcileRequest claimed) {
-        try{
+        try {
             ProviderObservation observation = observer.observe(claimed.instanceId());
             PreparedReconcile prepared = preparationService.prepare(claimed, observation);
-            if (requiresProviderAction(prepared.decision())){
+            if (requiresProviderAction(prepared.decision())) {
                 actionExecutor.execute(prepared);
             }
             boolean quotaReleaseRequired = finalizationService.complete(claimed, prepared);
@@ -39,7 +40,10 @@ public class ReconcileController {
             if (quotaReleaseRequired) {
                 compensationService.releaseQuotaIfCleanupCompleted(claimed.instanceId());
             }
-        }catch (Exception exception){
+
+        } catch (StaleReconcileRequestOwnerException exception) {
+            log.debug("Reconcile request {} is no longer owned by this worker", claimed.instanceId());
+        } catch (Exception exception) {
             handleFailure(claimed, exception);
         }
     }
@@ -66,7 +70,7 @@ public class ReconcileController {
                     Instant.now().plus(FAILURE_RETRY_DELAY),
                     summarize(exception)
             );
-        }catch (IllegalStateException staleOwner){
+        } catch (StaleReconcileRequestOwnerException staleOwner) {
             log.debug("Reconcile request {} is no longer owned by this worker", claimed.instanceId());
         }
     }

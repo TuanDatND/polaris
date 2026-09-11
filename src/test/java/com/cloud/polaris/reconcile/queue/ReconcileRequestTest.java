@@ -1,5 +1,6 @@
 package com.cloud.polaris.reconcile.queue;
 
+import com.cloud.polaris.common.exception.StaleReconcileRequestOwnerException;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
@@ -113,8 +114,11 @@ class ReconcileRequestTest {
         request.claim("worker-1", UUID.randomUUID(), NOW.plusSeconds(30));
 
         assertThatThrownBy(() -> request.assertClaimToken(UUID.randomUUID()))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessage("Stale reconcile request owner");
+                .isInstanceOf(StaleReconcileRequestOwnerException.class)
+                .hasMessage(
+                        "Stale reconcile request owner: "
+                                + request.getInstanceId()
+                );
     }
 
     private ReconcileRequest readyRequest() {

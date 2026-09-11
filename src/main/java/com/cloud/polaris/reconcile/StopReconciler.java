@@ -9,6 +9,7 @@ import com.cloud.polaris.provider.ProviderResource;
 import com.cloud.polaris.provider.ProviderResourceStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -21,6 +22,7 @@ import java.util.UUID;
 @Component
 @RequiredArgsConstructor
 @Slf4j
+@ConditionalOnProperty(prefix = "polaris.legacy-reconciliation", name = "enabled", havingValue = "true")
 public class StopReconciler {
 
     private final InstanceRepository instanceRepository;

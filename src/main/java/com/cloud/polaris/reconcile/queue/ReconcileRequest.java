@@ -1,5 +1,6 @@
 package com.cloud.polaris.reconcile.queue;
 
+import com.cloud.polaris.common.exception.StaleReconcileRequestOwnerException;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -142,9 +143,7 @@ public class ReconcileRequest {
         if (status != ReconcileRequestStatus.RUNNING
                 || token == null
                 || !Objects.equals(claimToken, token)) {
-            throw new IllegalStateException(
-                    "Stale reconcile request owner"
-            );
+            throw new StaleReconcileRequestOwnerException(instanceId);
         }
     }
 

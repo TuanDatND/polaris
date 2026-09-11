@@ -57,6 +57,10 @@ public class InstanceCommandService {
 
         Task task = Task.createInstanceTask(tenant, instance, payload);
         taskRepository.save(task);
+        reconcileQueueService.wake(
+                instance.getId(),
+                instance.getGeneration()
+        );
         return InstanceResponse.from(instance);
     }
 
