@@ -84,10 +84,20 @@ public class ReconcilePreparationService {
                 }
             }
 
-            case DELETE -> stateMachine.transitionIfNecessary(
-                    instance,
-                    CurrentState.DELETING
-            );
+            case DELETE -> {
+                if (instance.getCurrentState() == CurrentState.STARTING
+                        || instance.getCurrentState() == CurrentState.STOPPING) {
+                    stateMachine.transition(
+                            instance,
+                            CurrentState.STOPPED
+                    );
+                }
+
+                stateMachine.transitionIfNecessary(
+                        instance,
+                        CurrentState.DELETING
+                );
+            }
 
             case NOOP, WAIT, INVALID -> {
                 // Không đổi current state ở prepare.

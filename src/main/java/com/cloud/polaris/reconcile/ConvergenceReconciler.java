@@ -4,6 +4,7 @@ import com.cloud.polaris.instance.repository.InstanceRepository;
 import com.cloud.polaris.task.service.repair.RepairService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -14,6 +15,7 @@ import java.util.UUID;
 @Component
 @RequiredArgsConstructor
 @Slf4j
+@ConditionalOnProperty(prefix = "polaris.legacy-reconciliation", name = "enabled", havingValue = "true")
 public class ConvergenceReconciler {
 
     private final InstanceRepository instanceRepository;

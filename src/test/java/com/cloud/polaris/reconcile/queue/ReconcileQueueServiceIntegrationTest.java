@@ -1,5 +1,6 @@
 package com.cloud.polaris.reconcile.queue;
 
+import com.cloud.polaris.common.exception.StaleReconcileRequestOwnerException;
 import com.cloud.polaris.instance.domain.Instance;
 import com.cloud.polaris.instance.repository.InstanceRepository;
 import com.cloud.polaris.tenant.domain.Tenant;
@@ -222,8 +223,11 @@ class ReconcileQueueServiceIntegrationTest {
                 Instant.now().plusSeconds(10),
                 "stale worker must not requeue"
         ))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessage("Stale reconcile request owner");
+                .isInstanceOf(StaleReconcileRequestOwnerException.class)
+                .hasMessage(
+                        "Stale reconcile request owner: "
+                                + instance.getId()
+                );
 
         ReconcileRequest afterStaleRequeue = reconcileRequestRepository
                 .findById(instance.getId())

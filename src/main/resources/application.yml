@@ -62,7 +62,13 @@ app:
     max-age: 3600
 
 polaris:
-    task:
-      recovery-timeout: 5m
-      recovery-interval: 30s
-      recovery-batch-size: 100
+  legacy-reconciliation:
+    enabled: false
+
+  reconcile:
+    worker-enabled: true
+    worker-id: ${POLARIS_RECONCILE_WORKER_ID:${HOSTNAME:local}-${random.uuid}}
+    poll-interval: 1s
+    claim-batch-size: 1
+    lease-duration: 2m
+    recovery-batch-size: 100
