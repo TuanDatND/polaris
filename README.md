@@ -1,4 +1,3 @@
-# Polaris
 ## Highlights
 
 - Multi-tenant instance management
