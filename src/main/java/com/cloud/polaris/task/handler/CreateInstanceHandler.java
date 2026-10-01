@@ -1,10 +1,5 @@
 package com.cloud.polaris.task.handler;
 
-import com.cloud.polaris.common.exception.ResourceNotFoundException;
-import com.cloud.polaris.instance.domain.CurrentState;
-import com.cloud.polaris.instance.domain.DesiredState;
-import com.cloud.polaris.instance.domain.Instance;
-import com.cloud.polaris.instance.repository.InstanceRepository;
 import com.cloud.polaris.instance.service.InstanceLifecycleService;
 import com.cloud.polaris.provider.ComputeProvider;
 import com.cloud.polaris.provider.CreateContainerRequest;
@@ -14,19 +9,17 @@ import com.cloud.polaris.task.domain.ClaimedTask;
 import com.cloud.polaris.task.domain.TaskType;
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
 
-@Slf4j
+
 @Component
 @RequiredArgsConstructor
 public class CreateInstanceHandler implements TaskHandler {
 
     private final ComputeProvider computeProvider;
     private final InstanceLifecycleService instanceLifecycleService;
-    private final InstanceRepository instanceRepository;
 
     @Override
     public TaskType supportedType() {
@@ -39,104 +32,31 @@ public class CreateInstanceHandler implements TaskHandler {
                 .orElse(null);
 
 
-        if (resource != null && resource.status() == ProviderResourceStatus.RUNNING) {
-            //check desired state
-            boolean markedRunning =
-                    instanceLifecycleService.markRunning(
-                            task,
-                            resource.providerResourceId()
-                    );
-
-            if (!markedRunning) {
-                computeProvider.stop(resource.providerResourceId());
-                instanceLifecycleService.completeStop(task, false);
-            }
-            return;
-        }
-
-        instanceLifecycleService.ensureProvisioning(task.instanceId());
-
-        boolean createdInThisAttempt = false;
-
         if (resource == null) {
-            resource = computeProvider.createContainer(toCreateRequest(task));
-            createdInThisAttempt = true;
-        }
-
-        Instance instance = instanceRepository.findById(task.instanceId()).orElseThrow(() -> new ResourceNotFoundException("Instance not found "));
-        //for stop task when create task doing
-        if (instance.getDesiredState() != DesiredState.RUNNING ){
-            if (resource == null
-                    || resource.status() == ProviderResourceStatus.CREATED
-                    || resource.status() == ProviderResourceStatus.STOPPED) {
-
-                if (createdInThisAttempt && resource != null) {
-                    computeProvider.delete(resource.providerResourceId());
-                }
-                instanceLifecycleService.completeStop(task, createdInThisAttempt);
-                return;
-            }
-
-            if (resource.status() == ProviderResourceStatus.RUNNING) {
-                computeProvider.stop(resource.providerResourceId());
-                    instanceLifecycleService.completeStop(task, false);
-                return;
-            }
-        }
-
-        boolean cleanupAttempted = false;
-
-        try {
-            if (resource.status() != ProviderResourceStatus.RUNNING) {
-                computeProvider.start(resource.providerResourceId());
-            }
-
-            boolean markedRunning =
-                    instanceLifecycleService.markRunning(
-                            task,
-                            resource.providerResourceId()
-                    );
-
-            if (!markedRunning) {
-                cleanupAttempted = true;
-
-                boolean cleaned;
-
-                if (createdInThisAttempt) {
-                    cleaned = cleanupResource(resource);
-                } else {
-                    computeProvider.stop(resource.providerResourceId());
-                    cleaned = true;
-                }
-
-                if (!cleaned) {
-                    throw new IllegalStateException(
-                            "Failed to cleanup resource after desired state changed"
-                    );
-                }
-
-                instanceLifecycleService.completeStop(task, createdInThisAttempt);
-            }
-        } catch (Exception e) {
-            if (createdInThisAttempt && !cleanupAttempted) {
-                cleanupResource(resource);
-            }
-            throw e;
-        }
-    }
-
-    private boolean cleanupResource(ProviderResource resource) {
-        try {
-            computeProvider.delete(resource.providerResourceId());
-            return true;
-        } catch (Exception exception) {
-            log.error(
-                    "Failed to cleanup provider resource {}",
-                    resource.providerResourceId(),
-                    exception
+            instanceLifecycleService.ensureProvisioning(
+                    task.instanceId()
             );
-            return false;
+
+            resource = computeProvider.createContainer(
+                    toCreateRequest(task)
+            );
+            if (resource == null) {
+                throw new IllegalStateException(
+                        "Provider returned null after creating instance "
+                                + task.instanceId()
+                );
+            }
         }
+
+
+        if (resource.status() == ProviderResourceStatus.UNKNOWN) {
+            throw new IllegalStateException("Cannot complete provisioning because provider state is unknown");
+        }
+        instanceLifecycleService.completeProvisioning(
+                task,
+                resource.providerResourceId()
+        );
+
     }
 
     private CreateContainerRequest toCreateRequest(ClaimedTask task) {

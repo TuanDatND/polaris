@@ -2,11 +2,14 @@ package com.cloud.polaris.task.service;
 
 import com.cloud.polaris.common.exception.ResourceNotFoundException;
 import com.cloud.polaris.common.exception.StaleTaskOwnerException;
+import com.cloud.polaris.event.InstanceProvisionedEvent;
 import com.cloud.polaris.task.domain.ClaimedTask;
 import com.cloud.polaris.task.domain.Task;
+import com.cloud.polaris.task.domain.TaskType;
 import com.cloud.polaris.task.repository.TaskRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -17,6 +20,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class TaskStateService {
     private final TaskRepository taskRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
 
     @Transactional
@@ -30,11 +34,29 @@ public class TaskStateService {
 
     @Transactional
     public void markSuccess(UUID taskId, UUID claimToken) {
-        Task task = taskRepository.findByIdForUpdate(taskId).orElseThrow(() -> new ResourceNotFoundException("not found task " + taskId));
+        Task task = taskRepository.findByIdForUpdate(taskId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Task not found: " + taskId
+                        )
+                );
+
         if (!Objects.equals(task.getClaimToken(), claimToken)) {
-            throw new StaleTaskOwnerException(task.getId().toString());
+            throw new StaleTaskOwnerException(
+                    task.getId().toString()
+            );
         }
+
         task.markSuccess();
+
+        if (task.getType() == TaskType.CREATE_INSTANCE) {
+            eventPublisher.publishEvent(
+                    new InstanceProvisionedEvent(
+                            task.getInstance().getId(),
+                            task.getInstance().getGeneration()
+                    )
+            );
+        }
     }
 
     @Transactional

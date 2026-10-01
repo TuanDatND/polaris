@@ -52,6 +52,39 @@ public class InstanceLifecycleService {
     }
 
     @Transactional
+    public void completeProvisioning(
+            ClaimedTask claimedTask,
+            String providerResourceId
+    ) {
+        if (providerResourceId == null || providerResourceId.isBlank()) {
+            throw new IllegalArgumentException(
+                    "Provider resource id must not be blank"
+            );
+        }
+
+        Instance instance = assertToken(claimedTask);
+
+        switch (instance.getCurrentState()) {
+            case PENDING, PROVISIONING -> stateMachine.transitionIfNecessary(
+                    instance,
+                    CurrentState.STOPPED
+            );
+
+            case STOPPED -> {
+                // Idempotent retry.
+            }
+
+            default -> throw new IllegalStateException(
+                    "Cannot complete provisioning from "
+                            + instance.getCurrentState()
+            );
+        }
+
+        instance.attachContainer(providerResourceId);
+    }
+
+
+    @Transactional
     public boolean markRunning(ClaimedTask claimedTask, String containerId) {
         Instance instance = assertToken(claimedTask);
 
@@ -129,11 +162,10 @@ public class InstanceLifecycleService {
             return;
         }
         switch (instance.getCurrentState()) {
-            case STOPPED ->
-                    stateMachine.transitionIfNecessary(
-                            instance,
-                            CurrentState.DELETING
-                    );
+            case STOPPED -> stateMachine.transitionIfNecessary(
+                    instance,
+                    CurrentState.DELETING
+            );
             case DELETING, DELETED -> {
                 // Idempotent
             }
@@ -154,7 +186,7 @@ public class InstanceLifecycleService {
         }
 
         switch (instance.getCurrentState()) {
-            case PENDING, PROVISIONING,STARTING, STOPPING -> stateMachine.transitionIfNecessary(
+            case PENDING, PROVISIONING, STARTING, STOPPING -> stateMachine.transitionIfNecessary(
                     instance,
                     CurrentState.STOPPED
             );
@@ -235,7 +267,7 @@ public class InstanceLifecycleService {
     @Transactional
     public void completeDeleteFromReconciliation(
             UUID instanceId,
-            boolean resourceMissing){
+            boolean resourceMissing) {
         Instance instance = instanceRepository
                 .findByIdForUpdate(instanceId)
                 .orElseThrow(() ->
