@@ -62,9 +62,6 @@ app:
     max-age: 3600
 
 polaris:
-  legacy-reconciliation:
-    enabled: false
-
   reconcile:
     worker-enabled: true
     worker-id: ${POLARIS_RECONCILE_WORKER_ID:${HOSTNAME:local}-${random.uuid}}
