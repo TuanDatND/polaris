@@ -90,47 +90,6 @@ public class Task {
         return task;
     }
 
-    public static Task startInstanceTask(Tenant tenant, Instance instance, String idempotencyKey) {
-        Task task = new Task();
-        task.tenant = tenant;
-        task.instance = instance;
-        task.type = TaskType.START_INSTANCE;
-        task.status = TaskStatus.QUEUED;
-        task.attempts = 0;
-        task.maxAttempts = 5;
-        task.availableAt = Instant.now();
-        task.idempotencyKey = idempotencyKey;
-        return task;
-    }
-
-    public static Task stopInstanceTask(Tenant tenant, Instance instance, JsonNode payload, String idempotencyKey) {
-        Task task = new Task();
-        task.tenant = tenant;
-        task.instance = instance;
-        task.type = TaskType.STOP_INSTANCE;
-        task.status = TaskStatus.QUEUED;
-        task.attempts = 0;
-        task.maxAttempts = 5;
-        task.availableAt = Instant.now();
-        task.idempotencyKey = idempotencyKey;
-        task.payload = payload;
-
-        return task;
-    }
-
-    public static Task deleteInstanceTask(Tenant tenant, Instance instance, String idempotencyKey) {
-        Task task = new Task();
-        task.tenant = tenant;
-        task.instance = instance;
-        task.type = TaskType.DELETE_INSTANCE;
-        task.status = TaskStatus.QUEUED;
-        task.attempts = 0;
-        task.maxAttempts = 5;
-        task.availableAt = Instant.now();
-        task.idempotencyKey =idempotencyKey;
-        return task;
-    }
-
     public void claim(String workerId, UUID claimToken, Instant now) {
         if (status != TaskStatus.QUEUED) {
             throw new IllegalStateException("Task is not queued");
