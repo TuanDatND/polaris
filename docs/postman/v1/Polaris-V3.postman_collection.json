@@ -1,0 +1,1057 @@
+{
+  "info": {
+    "_postman_id": "fde7aa22-ac09-4da4-bd9c-7795740d7a42",
+    "name": "Polaris V3 - Lifecycle API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Local API integration smoke tests grounded in the current Spring Security form-login + CSRF configuration. Requires existing app user, running PostgreSQL/Docker, and nginx:alpine pulled into the Docker daemon used by Polaris. Import the environment, set username/password, then run the entire collection with delay 1000 ms, iterations 1. Creates one tenant and one instance; the instance is deleted on success. Tenant remains. Stops on first assertion failure; instance_id remains available for manual DELETE cleanup. Does not verify provider drift, claim races, internal COMPLETED status or quota release (not exposed by current GET response)."
+  },
+  "auth": {
+    "type": "noauth"
+  },
+  "variable": [
+    {
+      "key": "run_id",
+      "value": ""
+    },
+    {
+      "key": "tenant_id",
+      "value": ""
+    },
+    {
+      "key": "instance_id",
+      "value": ""
+    },
+    {
+      "key": "csrf_token",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "id": "d3074e63-790b-4ad7-a142-000000000001",
+      "name": "01 - Get login CSRF",
+      "protocolProfileBehavior": {
+        "followRedirects": false
+      },
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "text/html"
+          }
+        ],
+        "url": "{{base_url}}/login",
+        "description": "Initializes a new test run and obtains Spring Security's CSRF token. Requires an existing username/password in the selected environment."
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (!pm.environment.get(\"username\") || !pm.environment.get(\"password\")) {",
+              "    pm.execution.setNextRequest(null);",
+              "    throw new Error(\"Set username and password in the selected Polaris Local environment. Use an existing app user.\");",
+              "}",
+              "const runId = Date.now().toString() + \"-\" + pm.variables.replaceIn(\"{{$guid}}\").slice(0, 8);",
+              "pm.collectionVariables.set(\"run_id\", runId);",
+              "pm.collectionVariables.set(\"tenant_id\", \"\");",
+              "pm.collectionVariables.set(\"instance_id\", \"\");",
+              "pm.collectionVariables.set(\"csrf_token\", \"\");",
+              "[\"poll_create\", \"poll_stop\", \"poll_restart\", \"poll_delete\"].forEach(function (key) {",
+              "    pm.variables.unset(key);",
+              "});"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function check(name, condition) {",
+              "    pm.test(name, function () { pm.expect(condition, name).to.eql(true); });",
+              "    if (!condition) {",
+              "        pm.execution.setNextRequest(null);",
+              "        throw new Error(name);",
+              "    }",
+              "}",
+              "function jsonResponse(status) {",
+              "    check(\"HTTP \" + status + \" (actual \" + pm.response.code + \")\", pm.response.code === status);",
+              "    check(\"Response is JSON\", /application\\/json/i.test(pm.response.headers.get(\"Content-Type\") || \"\"));",
+              "    return pm.response.json();",
+              "}",
+              "function checkInstance(body, desired) {",
+              "    check(\"Correct instance\", body.id === pm.collectionVariables.get(\"instance_id\"));",
+              "    check(\"Correct tenant\", body.tenantId === pm.collectionVariables.get(\"tenant_id\"));",
+              "    check(\"Desired state is \" + desired, body.desiredState === desired);",
+              "}",
+              "check(\"Login page HTTP 200\", pm.response.code === 200);",
+              "const html = pm.response.text();",
+              "const input = (html.match(/<input\\b[^>]*>/gi) || []).find(function (tag) {",
+              "    return /\\bname\\s*=\\s*[\"']_csrf[\"']/i.test(tag);",
+              "});",
+              "const match = input && input.match(/\\bvalue\\s*=\\s*[\"']([^\"']+)[\"']/i);",
+              "check(\"CSRF token exists in login form\", !!match);",
+              "pm.collectionVariables.set(\"csrf_token\", match[1]);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "d3074e63-790b-4ad7-a142-000000000002",
+      "name": "02 - Login with session",
+      "protocolProfileBehavior": {
+        "followRedirects": false
+      },
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "text/html"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/x-www-form-urlencoded"
+          }
+        ],
+        "url": "{{base_url}}/login",
+        "description": "Form login; redirects are disabled so a redirect to /login?error cannot appear as a successful 200. Postman manages session cookies automatically.",
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            {
+              "key": "username",
+              "value": "{{username}}",
+              "type": "text"
+            },
+            {
+              "key": "password",
+              "value": "{{password}}",
+              "type": "text"
+            },
+            {
+              "key": "_csrf",
+              "value": "{{csrf_token}}",
+              "type": "text"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function check(name, condition) {",
+              "    pm.test(name, function () { pm.expect(condition, name).to.eql(true); });",
+              "    if (!condition) {",
+              "        pm.execution.setNextRequest(null);",
+              "        throw new Error(name);",
+              "    }",
+              "}",
+              "function jsonResponse(status) {",
+              "    check(\"HTTP \" + status + \" (actual \" + pm.response.code + \")\", pm.response.code === status);",
+              "    check(\"Response is JSON\", /application\\/json/i.test(pm.response.headers.get(\"Content-Type\") || \"\"));",
+              "    return pm.response.json();",
+              "}",
+              "function checkInstance(body, desired) {",
+              "    check(\"Correct instance\", body.id === pm.collectionVariables.get(\"instance_id\"));",
+              "    check(\"Correct tenant\", body.tenantId === pm.collectionVariables.get(\"tenant_id\"));",
+              "    check(\"Desired state is \" + desired, body.desiredState === desired);",
+              "}",
+              "check(\"Login returns a redirect\", [302, 303].includes(pm.response.code));",
+              "const location = pm.response.headers.get(\"Location\") || \"\";",
+              "check(\"Login succeeded (no error redirect)\", location.length > 0 && !/[?&]error(?:[=&]|$)/i.test(location) && !/\\/login(?:[?#]|$)/i.test(location));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "d3074e63-790b-4ad7-a142-000000000003",
+      "name": "03 - Refresh CSRF after login",
+      "protocolProfileBehavior": {
+        "followRedirects": false
+      },
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "text/html"
+          }
+        ],
+        "url": "{{base_url}}/login",
+        "description": "Login rotates the CSRF token. Fetch a fresh token using the authenticated session before POST/DELETE API calls."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function check(name, condition) {",
+              "    pm.test(name, function () { pm.expect(condition, name).to.eql(true); });",
+              "    if (!condition) {",
+              "        pm.execution.setNextRequest(null);",
+              "        throw new Error(name);",
+              "    }",
+              "}",
+              "function jsonResponse(status) {",
+              "    check(\"HTTP \" + status + \" (actual \" + pm.response.code + \")\", pm.response.code === status);",
+              "    check(\"Response is JSON\", /application\\/json/i.test(pm.response.headers.get(\"Content-Type\") || \"\"));",
+              "    return pm.response.json();",
+              "}",
+              "function checkInstance(body, desired) {",
+              "    check(\"Correct instance\", body.id === pm.collectionVariables.get(\"instance_id\"));",
+              "    check(\"Correct tenant\", body.tenantId === pm.collectionVariables.get(\"tenant_id\"));",
+              "    check(\"Desired state is \" + desired, body.desiredState === desired);",
+              "}",
+              "check(\"Login page HTTP 200\", pm.response.code === 200);",
+              "const html = pm.response.text();",
+              "const input = (html.match(/<input\\b[^>]*>/gi) || []).find(function (tag) {",
+              "    return /\\bname\\s*=\\s*[\"']_csrf[\"']/i.test(tag);",
+              "});",
+              "const match = input && input.match(/\\bvalue\\s*=\\s*[\"']([^\"']+)[\"']/i);",
+              "check(\"CSRF token exists in login form\", !!match);",
+              "pm.collectionVariables.set(\"csrf_token\", match[1]);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "d3074e63-790b-4ad7-a142-000000000004",
+      "name": "04 - Create isolated test tenant",
+      "protocolProfileBehavior": {
+        "followRedirects": false
+      },
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "X-CSRF-TOKEN",
+            "value": "{{csrf_token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/tenants",
+        "description": "Creates a fresh tenant for this run. Tenant is retained because the project exposes no tenant DELETE API. Quota allows exactly one test instance.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"postman-v3-{{run_id}}\",\n  \"quotaCpu\": 2,\n  \"quotaRamMb\": 1024,\n  \"quotaInstanceCount\": 1\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function check(name, condition) {",
+              "    pm.test(name, function () { pm.expect(condition, name).to.eql(true); });",
+              "    if (!condition) {",
+              "        pm.execution.setNextRequest(null);",
+              "        throw new Error(name);",
+              "    }",
+              "}",
+              "function jsonResponse(status) {",
+              "    check(\"HTTP \" + status + \" (actual \" + pm.response.code + \")\", pm.response.code === status);",
+              "    check(\"Response is JSON\", /application\\/json/i.test(pm.response.headers.get(\"Content-Type\") || \"\"));",
+              "    return pm.response.json();",
+              "}",
+              "function checkInstance(body, desired) {",
+              "    check(\"Correct instance\", body.id === pm.collectionVariables.get(\"instance_id\"));",
+              "    check(\"Correct tenant\", body.tenantId === pm.collectionVariables.get(\"tenant_id\"));",
+              "    check(\"Desired state is \" + desired, body.desiredState === desired);",
+              "}",
+              "const body = jsonResponse(201);",
+              "check(\"Tenant id exists\", typeof body.id === \"string\" && body.id.length > 0);",
+              "check(\"New tenant has no allocated instances\", body.allocatedInstanceCount === 0);",
+              "pm.collectionVariables.set(\"tenant_id\", body.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "d3074e63-790b-4ad7-a142-000000000005",
+      "name": "05 - Reject invalid CPU",
+      "protocolProfileBehavior": {
+        "followRedirects": false
+      },
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Tenant-Id",
+            "value": "{{tenant_id}}"
+          },
+          {
+            "key": "X-CSRF-TOKEN",
+            "value": "{{csrf_token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/instances",
+        "description": "",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"postman-v3-{{run_id}}\",\n  \"imageName\": \"{{image_name}}\",\n  \"cpu\": 0,\n  \"ramMb\": 128\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function check(name, condition) {",
+              "    pm.test(name, function () { pm.expect(condition, name).to.eql(true); });",
+              "    if (!condition) {",
+              "        pm.execution.setNextRequest(null);",
+              "        throw new Error(name);",
+              "    }",
+              "}",
+              "function jsonResponse(status) {",
+              "    check(\"HTTP \" + status + \" (actual \" + pm.response.code + \")\", pm.response.code === status);",
+              "    check(\"Response is JSON\", /application\\/json/i.test(pm.response.headers.get(\"Content-Type\") || \"\"));",
+              "    return pm.response.json();",
+              "}",
+              "function checkInstance(body, desired) {",
+              "    check(\"Correct instance\", body.id === pm.collectionVariables.get(\"instance_id\"));",
+              "    check(\"Correct tenant\", body.tenantId === pm.collectionVariables.get(\"tenant_id\"));",
+              "    check(\"Desired state is \" + desired, body.desiredState === desired);",
+              "}",
+              "const body = jsonResponse(400);",
+              "check(\"Validation error code\", body.code === \"VALIDATION_FAILED\");"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "d3074e63-790b-4ad7-a142-000000000006",
+      "name": "06 - Create instance",
+      "protocolProfileBehavior": {
+        "followRedirects": false
+      },
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Tenant-Id",
+            "value": "{{tenant_id}}"
+          },
+          {
+            "key": "X-CSRF-TOKEN",
+            "value": "{{csrf_token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/instances",
+        "description": "202 confirms intent acceptance. currentState need not be RUNNING yet. The following poll checks convergence.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"postman-v3-{{run_id}}\",\n  \"imageName\": \"{{image_name}}\",\n  \"cpu\": 1,\n  \"ramMb\": 128\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function check(name, condition) {",
+              "    pm.test(name, function () { pm.expect(condition, name).to.eql(true); });",
+              "    if (!condition) {",
+              "        pm.execution.setNextRequest(null);",
+              "        throw new Error(name);",
+              "    }",
+              "}",
+              "function jsonResponse(status) {",
+              "    check(\"HTTP \" + status + \" (actual \" + pm.response.code + \")\", pm.response.code === status);",
+              "    check(\"Response is JSON\", /application\\/json/i.test(pm.response.headers.get(\"Content-Type\") || \"\"));",
+              "    return pm.response.json();",
+              "}",
+              "function checkInstance(body, desired) {",
+              "    check(\"Correct instance\", body.id === pm.collectionVariables.get(\"instance_id\"));",
+              "    check(\"Correct tenant\", body.tenantId === pm.collectionVariables.get(\"tenant_id\"));",
+              "    check(\"Desired state is \" + desired, body.desiredState === desired);",
+              "}",
+              "const body = jsonResponse(202);",
+              "check(\"Instance id exists\", typeof body.id === \"string\" && body.id.length > 0);",
+              "pm.collectionVariables.set(\"instance_id\", body.id);",
+              "checkInstance(body, \"RUNNING\");",
+              "check(\"CPU allocation preserved\", body.cpuAllocated === 1);",
+              "check(\"RAM allocation preserved\", body.ramMb === 128);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "d3074e63-790b-4ad7-a142-000000000007",
+      "name": "07 - Wait for initial RUNNING",
+      "protocolProfileBehavior": {
+        "followRedirects": false
+      },
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Tenant-Id",
+            "value": "{{tenant_id}}"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/instances/{{instance_id}}",
+        "description": "Poll until currentState and desiredState are RUNNING; stops on FAILED or after max_poll_attempts. Run the entire collection with a 1000 ms Runner delay. Send alone does not repeat automatically."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function check(name, condition) {",
+              "    pm.test(name, function () { pm.expect(condition, name).to.eql(true); });",
+              "    if (!condition) {",
+              "        pm.execution.setNextRequest(null);",
+              "        throw new Error(name);",
+              "    }",
+              "}",
+              "function jsonResponse(status) {",
+              "    check(\"HTTP \" + status + \" (actual \" + pm.response.code + \")\", pm.response.code === status);",
+              "    check(\"Response is JSON\", /application\\/json/i.test(pm.response.headers.get(\"Content-Type\") || \"\"));",
+              "    return pm.response.json();",
+              "}",
+              "function checkInstance(body, desired) {",
+              "    check(\"Correct instance\", body.id === pm.collectionVariables.get(\"instance_id\"));",
+              "    check(\"Correct tenant\", body.tenantId === pm.collectionVariables.get(\"tenant_id\"));",
+              "    check(\"Desired state is \" + desired, body.desiredState === desired);",
+              "}",
+              "const body = jsonResponse(200);",
+              "checkInstance(body, \"RUNNING\");",
+              "check(\"Instance has not FAILED: \" + (body.failureReason || \"\"), body.currentState !== \"FAILED\");",
+              "const key = \"poll_create\";",
+              "const attempt = Number(pm.variables.get(key) || 0) + 1;",
+              "const limit = Number(pm.environment.get(\"max_poll_attempts\") || 120);",
+              "check(\"max_poll_attempts is a positive integer\", Number.isInteger(limit) && limit > 0);",
+              "if (body.currentState === \"RUNNING\") {",
+              "    check(\"Converged to RUNNING\", true);",
+              "    check(\"Provider resource attached\", typeof body.containerId === \"string\" && body.containerId.length > 0);",
+              "    pm.variables.unset(key);",
+              "} else {",
+              "    check(\"Convergence timeout: expected RUNNING, actual \" + body.currentState + \", attempt \" + attempt + \"/\" + limit, attempt < limit);",
+              "    pm.variables.set(key, attempt);",
+              "    console.log(\"07 - Wait for initial RUNNING: still \" + body.currentState + \" (\" + attempt + \"/\" + limit + \")\");",
+              "    pm.execution.setNextRequest(pm.info.requestId);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "d3074e63-790b-4ad7-a142-000000000008",
+      "name": "08 - Reject duplicate instance name",
+      "protocolProfileBehavior": {
+        "followRedirects": false
+      },
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Tenant-Id",
+            "value": "{{tenant_id}}"
+          },
+          {
+            "key": "X-CSRF-TOKEN",
+            "value": "{{csrf_token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/instances",
+        "description": "",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"postman-v3-{{run_id}}\",\n  \"imageName\": \"{{image_name}}\",\n  \"cpu\": 1,\n  \"ramMb\": 128\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function check(name, condition) {",
+              "    pm.test(name, function () { pm.expect(condition, name).to.eql(true); });",
+              "    if (!condition) {",
+              "        pm.execution.setNextRequest(null);",
+              "        throw new Error(name);",
+              "    }",
+              "}",
+              "function jsonResponse(status) {",
+              "    check(\"HTTP \" + status + \" (actual \" + pm.response.code + \")\", pm.response.code === status);",
+              "    check(\"Response is JSON\", /application\\/json/i.test(pm.response.headers.get(\"Content-Type\") || \"\"));",
+              "    return pm.response.json();",
+              "}",
+              "function checkInstance(body, desired) {",
+              "    check(\"Correct instance\", body.id === pm.collectionVariables.get(\"instance_id\"));",
+              "    check(\"Correct tenant\", body.tenantId === pm.collectionVariables.get(\"tenant_id\"));",
+              "    check(\"Desired state is \" + desired, body.desiredState === desired);",
+              "}",
+              "const body = jsonResponse(409);",
+              "check(\"Duplicate name error\", body.code === \"DUPLICATE_RESOURCE\");"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "d3074e63-790b-4ad7-a142-000000000009",
+      "name": "09 - Reject quota overflow",
+      "protocolProfileBehavior": {
+        "followRedirects": false
+      },
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Tenant-Id",
+            "value": "{{tenant_id}}"
+          },
+          {
+            "key": "X-CSRF-TOKEN",
+            "value": "{{csrf_token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/instances",
+        "description": "Tenant instance quota is one and the first instance is already provisioned. The rejected request must not create a second instance.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"quota-overflow-{{run_id}}\",\n  \"imageName\": \"{{image_name}}\",\n  \"cpu\": 1,\n  \"ramMb\": 128\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function check(name, condition) {",
+              "    pm.test(name, function () { pm.expect(condition, name).to.eql(true); });",
+              "    if (!condition) {",
+              "        pm.execution.setNextRequest(null);",
+              "        throw new Error(name);",
+              "    }",
+              "}",
+              "function jsonResponse(status) {",
+              "    check(\"HTTP \" + status + \" (actual \" + pm.response.code + \")\", pm.response.code === status);",
+              "    check(\"Response is JSON\", /application\\/json/i.test(pm.response.headers.get(\"Content-Type\") || \"\"));",
+              "    return pm.response.json();",
+              "}",
+              "function checkInstance(body, desired) {",
+              "    check(\"Correct instance\", body.id === pm.collectionVariables.get(\"instance_id\"));",
+              "    check(\"Correct tenant\", body.tenantId === pm.collectionVariables.get(\"tenant_id\"));",
+              "    check(\"Desired state is \" + desired, body.desiredState === desired);",
+              "}",
+              "const body = jsonResponse(409);",
+              "check(\"Quota exceeded error\", body.code === \"QUOTA_EXCEEDED\");"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "d3074e63-790b-4ad7-a142-000000000010",
+      "name": "10 - Request STOPPED",
+      "protocolProfileBehavior": {
+        "followRedirects": false
+      },
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Tenant-Id",
+            "value": "{{tenant_id}}"
+          },
+          {
+            "key": "X-CSRF-TOKEN",
+            "value": "{{csrf_token}}"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/instances/{{instance_id}}/stop",
+        "description": "Checks accepted desired state only; the next GET polling request verifies convergence."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function check(name, condition) {",
+              "    pm.test(name, function () { pm.expect(condition, name).to.eql(true); });",
+              "    if (!condition) {",
+              "        pm.execution.setNextRequest(null);",
+              "        throw new Error(name);",
+              "    }",
+              "}",
+              "function jsonResponse(status) {",
+              "    check(\"HTTP \" + status + \" (actual \" + pm.response.code + \")\", pm.response.code === status);",
+              "    check(\"Response is JSON\", /application\\/json/i.test(pm.response.headers.get(\"Content-Type\") || \"\"));",
+              "    return pm.response.json();",
+              "}",
+              "function checkInstance(body, desired) {",
+              "    check(\"Correct instance\", body.id === pm.collectionVariables.get(\"instance_id\"));",
+              "    check(\"Correct tenant\", body.tenantId === pm.collectionVariables.get(\"tenant_id\"));",
+              "    check(\"Desired state is \" + desired, body.desiredState === desired);",
+              "}",
+              "const body = jsonResponse(202);",
+              "checkInstance(body, \"STOPPED\");"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "d3074e63-790b-4ad7-a142-000000000011",
+      "name": "11 - Wait for STOPPED",
+      "protocolProfileBehavior": {
+        "followRedirects": false
+      },
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Tenant-Id",
+            "value": "{{tenant_id}}"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/instances/{{instance_id}}",
+        "description": "Poll until currentState and desiredState are STOPPED; stops on FAILED or after max_poll_attempts. Run the entire collection with a 1000 ms Runner delay. Send alone does not repeat automatically."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function check(name, condition) {",
+              "    pm.test(name, function () { pm.expect(condition, name).to.eql(true); });",
+              "    if (!condition) {",
+              "        pm.execution.setNextRequest(null);",
+              "        throw new Error(name);",
+              "    }",
+              "}",
+              "function jsonResponse(status) {",
+              "    check(\"HTTP \" + status + \" (actual \" + pm.response.code + \")\", pm.response.code === status);",
+              "    check(\"Response is JSON\", /application\\/json/i.test(pm.response.headers.get(\"Content-Type\") || \"\"));",
+              "    return pm.response.json();",
+              "}",
+              "function checkInstance(body, desired) {",
+              "    check(\"Correct instance\", body.id === pm.collectionVariables.get(\"instance_id\"));",
+              "    check(\"Correct tenant\", body.tenantId === pm.collectionVariables.get(\"tenant_id\"));",
+              "    check(\"Desired state is \" + desired, body.desiredState === desired);",
+              "}",
+              "const body = jsonResponse(200);",
+              "checkInstance(body, \"STOPPED\");",
+              "check(\"Instance has not FAILED: \" + (body.failureReason || \"\"), body.currentState !== \"FAILED\");",
+              "const key = \"poll_stop\";",
+              "const attempt = Number(pm.variables.get(key) || 0) + 1;",
+              "const limit = Number(pm.environment.get(\"max_poll_attempts\") || 120);",
+              "check(\"max_poll_attempts is a positive integer\", Number.isInteger(limit) && limit > 0);",
+              "if (body.currentState === \"STOPPED\") {",
+              "    check(\"Converged to STOPPED\", true);",
+              "    check(\"Provider resource attached\", typeof body.containerId === \"string\" && body.containerId.length > 0);",
+              "    pm.variables.unset(key);",
+              "} else {",
+              "    check(\"Convergence timeout: expected STOPPED, actual \" + body.currentState + \", attempt \" + attempt + \"/\" + limit, attempt < limit);",
+              "    pm.variables.set(key, attempt);",
+              "    console.log(\"11 - Wait for STOPPED: still \" + body.currentState + \" (\" + attempt + \"/\" + limit + \")\");",
+              "    pm.execution.setNextRequest(pm.info.requestId);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "d3074e63-790b-4ad7-a142-000000000012",
+      "name": "12 - Request RUNNING again",
+      "protocolProfileBehavior": {
+        "followRedirects": false
+      },
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Tenant-Id",
+            "value": "{{tenant_id}}"
+          },
+          {
+            "key": "X-CSRF-TOKEN",
+            "value": "{{csrf_token}}"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/instances/{{instance_id}}/start",
+        "description": "Checks accepted desired state only; the next GET polling request verifies convergence."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function check(name, condition) {",
+              "    pm.test(name, function () { pm.expect(condition, name).to.eql(true); });",
+              "    if (!condition) {",
+              "        pm.execution.setNextRequest(null);",
+              "        throw new Error(name);",
+              "    }",
+              "}",
+              "function jsonResponse(status) {",
+              "    check(\"HTTP \" + status + \" (actual \" + pm.response.code + \")\", pm.response.code === status);",
+              "    check(\"Response is JSON\", /application\\/json/i.test(pm.response.headers.get(\"Content-Type\") || \"\"));",
+              "    return pm.response.json();",
+              "}",
+              "function checkInstance(body, desired) {",
+              "    check(\"Correct instance\", body.id === pm.collectionVariables.get(\"instance_id\"));",
+              "    check(\"Correct tenant\", body.tenantId === pm.collectionVariables.get(\"tenant_id\"));",
+              "    check(\"Desired state is \" + desired, body.desiredState === desired);",
+              "}",
+              "const body = jsonResponse(202);",
+              "checkInstance(body, \"RUNNING\");"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "d3074e63-790b-4ad7-a142-000000000013",
+      "name": "13 - Wait for restarted RUNNING",
+      "protocolProfileBehavior": {
+        "followRedirects": false
+      },
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Tenant-Id",
+            "value": "{{tenant_id}}"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/instances/{{instance_id}}",
+        "description": "Poll until currentState and desiredState are RUNNING; stops on FAILED or after max_poll_attempts. Run the entire collection with a 1000 ms Runner delay. Send alone does not repeat automatically."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function check(name, condition) {",
+              "    pm.test(name, function () { pm.expect(condition, name).to.eql(true); });",
+              "    if (!condition) {",
+              "        pm.execution.setNextRequest(null);",
+              "        throw new Error(name);",
+              "    }",
+              "}",
+              "function jsonResponse(status) {",
+              "    check(\"HTTP \" + status + \" (actual \" + pm.response.code + \")\", pm.response.code === status);",
+              "    check(\"Response is JSON\", /application\\/json/i.test(pm.response.headers.get(\"Content-Type\") || \"\"));",
+              "    return pm.response.json();",
+              "}",
+              "function checkInstance(body, desired) {",
+              "    check(\"Correct instance\", body.id === pm.collectionVariables.get(\"instance_id\"));",
+              "    check(\"Correct tenant\", body.tenantId === pm.collectionVariables.get(\"tenant_id\"));",
+              "    check(\"Desired state is \" + desired, body.desiredState === desired);",
+              "}",
+              "const body = jsonResponse(200);",
+              "checkInstance(body, \"RUNNING\");",
+              "check(\"Instance has not FAILED: \" + (body.failureReason || \"\"), body.currentState !== \"FAILED\");",
+              "const key = \"poll_restart\";",
+              "const attempt = Number(pm.variables.get(key) || 0) + 1;",
+              "const limit = Number(pm.environment.get(\"max_poll_attempts\") || 120);",
+              "check(\"max_poll_attempts is a positive integer\", Number.isInteger(limit) && limit > 0);",
+              "if (body.currentState === \"RUNNING\") {",
+              "    check(\"Converged to RUNNING\", true);",
+              "    check(\"Provider resource attached\", typeof body.containerId === \"string\" && body.containerId.length > 0);",
+              "    pm.variables.unset(key);",
+              "} else {",
+              "    check(\"Convergence timeout: expected RUNNING, actual \" + body.currentState + \", attempt \" + attempt + \"/\" + limit, attempt < limit);",
+              "    pm.variables.set(key, attempt);",
+              "    console.log(\"13 - Wait for restarted RUNNING: still \" + body.currentState + \" (\" + attempt + \"/\" + limit + \")\");",
+              "    pm.execution.setNextRequest(pm.info.requestId);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "d3074e63-790b-4ad7-a142-000000000014",
+      "name": "14 - Request DELETED while RUNNING",
+      "protocolProfileBehavior": {
+        "followRedirects": false
+      },
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Tenant-Id",
+            "value": "{{tenant_id}}"
+          },
+          {
+            "key": "X-CSRF-TOKEN",
+            "value": "{{csrf_token}}"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/instances/{{instance_id}}",
+        "description": "Checks accepted desired state only; the next GET polling request verifies convergence."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function check(name, condition) {",
+              "    pm.test(name, function () { pm.expect(condition, name).to.eql(true); });",
+              "    if (!condition) {",
+              "        pm.execution.setNextRequest(null);",
+              "        throw new Error(name);",
+              "    }",
+              "}",
+              "function jsonResponse(status) {",
+              "    check(\"HTTP \" + status + \" (actual \" + pm.response.code + \")\", pm.response.code === status);",
+              "    check(\"Response is JSON\", /application\\/json/i.test(pm.response.headers.get(\"Content-Type\") || \"\"));",
+              "    return pm.response.json();",
+              "}",
+              "function checkInstance(body, desired) {",
+              "    check(\"Correct instance\", body.id === pm.collectionVariables.get(\"instance_id\"));",
+              "    check(\"Correct tenant\", body.tenantId === pm.collectionVariables.get(\"tenant_id\"));",
+              "    check(\"Desired state is \" + desired, body.desiredState === desired);",
+              "}",
+              "const body = jsonResponse(202);",
+              "checkInstance(body, \"DELETED\");"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "d3074e63-790b-4ad7-a142-000000000015",
+      "name": "15 - Wait for DELETED",
+      "protocolProfileBehavior": {
+        "followRedirects": false
+      },
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Tenant-Id",
+            "value": "{{tenant_id}}"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/instances/{{instance_id}}",
+        "description": "Poll until currentState and desiredState are DELETED; stops on FAILED or after max_poll_attempts. Run the entire collection with a 1000 ms Runner delay. Send alone does not repeat automatically."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function check(name, condition) {",
+              "    pm.test(name, function () { pm.expect(condition, name).to.eql(true); });",
+              "    if (!condition) {",
+              "        pm.execution.setNextRequest(null);",
+              "        throw new Error(name);",
+              "    }",
+              "}",
+              "function jsonResponse(status) {",
+              "    check(\"HTTP \" + status + \" (actual \" + pm.response.code + \")\", pm.response.code === status);",
+              "    check(\"Response is JSON\", /application\\/json/i.test(pm.response.headers.get(\"Content-Type\") || \"\"));",
+              "    return pm.response.json();",
+              "}",
+              "function checkInstance(body, desired) {",
+              "    check(\"Correct instance\", body.id === pm.collectionVariables.get(\"instance_id\"));",
+              "    check(\"Correct tenant\", body.tenantId === pm.collectionVariables.get(\"tenant_id\"));",
+              "    check(\"Desired state is \" + desired, body.desiredState === desired);",
+              "}",
+              "const body = jsonResponse(200);",
+              "checkInstance(body, \"DELETED\");",
+              "check(\"Instance has not FAILED: \" + (body.failureReason || \"\"), body.currentState !== \"FAILED\");",
+              "const key = \"poll_delete\";",
+              "const attempt = Number(pm.variables.get(key) || 0) + 1;",
+              "const limit = Number(pm.environment.get(\"max_poll_attempts\") || 120);",
+              "check(\"max_poll_attempts is a positive integer\", Number.isInteger(limit) && limit > 0);",
+              "if (body.currentState === \"DELETED\") {",
+              "    check(\"Converged to DELETED\", true);",
+              "    check(\"Container reference cleared\", body.containerId === null);",
+              "    pm.variables.unset(key);",
+              "} else {",
+              "    check(\"Convergence timeout: expected DELETED, actual \" + body.currentState + \", attempt \" + attempt + \"/\" + limit, attempt < limit);",
+              "    pm.variables.set(key, attempt);",
+              "    console.log(\"15 - Wait for DELETED: still \" + body.currentState + \" (\" + attempt + \"/\" + limit + \")\");",
+              "    pm.execution.setNextRequest(pm.info.requestId);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "d3074e63-790b-4ad7-a142-000000000016",
+      "name": "16 - Repeat DELETE idempotently",
+      "protocolProfileBehavior": {
+        "followRedirects": false
+      },
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Tenant-Id",
+            "value": "{{tenant_id}}"
+          },
+          {
+            "key": "X-CSRF-TOKEN",
+            "value": "{{csrf_token}}"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/instances/{{instance_id}}",
+        "description": "Checks accepted desired state only; the next GET polling request verifies convergence."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function check(name, condition) {",
+              "    pm.test(name, function () { pm.expect(condition, name).to.eql(true); });",
+              "    if (!condition) {",
+              "        pm.execution.setNextRequest(null);",
+              "        throw new Error(name);",
+              "    }",
+              "}",
+              "function jsonResponse(status) {",
+              "    check(\"HTTP \" + status + \" (actual \" + pm.response.code + \")\", pm.response.code === status);",
+              "    check(\"Response is JSON\", /application\\/json/i.test(pm.response.headers.get(\"Content-Type\") || \"\"));",
+              "    return pm.response.json();",
+              "}",
+              "function checkInstance(body, desired) {",
+              "    check(\"Correct instance\", body.id === pm.collectionVariables.get(\"instance_id\"));",
+              "    check(\"Correct tenant\", body.tenantId === pm.collectionVariables.get(\"tenant_id\"));",
+              "    check(\"Desired state is \" + desired, body.desiredState === desired);",
+              "}",
+              "const body = jsonResponse(202);",
+              "checkInstance(body, \"DELETED\");",
+              "check(\"Remains DELETED\", body.currentState === \"DELETED\");",
+              "check(\"Container reference remains cleared\", body.containerId === null);"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
