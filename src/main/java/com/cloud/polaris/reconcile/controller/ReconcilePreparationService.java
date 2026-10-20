@@ -11,15 +11,11 @@ import com.cloud.polaris.reconcile.planner.InstanceReconcilePlanner;
 import com.cloud.polaris.reconcile.queue.ClaimedReconcileRequest;
 import com.cloud.polaris.reconcile.queue.ReconcileRequest;
 import com.cloud.polaris.reconcile.queue.ReconcileRequestRepository;
-import com.cloud.polaris.task.domain.TaskStatus;
-import com.cloud.polaris.task.domain.TaskType;
-import com.cloud.polaris.task.repository.TaskRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
-import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -29,10 +25,6 @@ public class ReconcilePreparationService {
     private final ReconcileRequestRepository reconcileRequestRepository;
     private final InstanceStateMachine stateMachine;
     private final InstanceReconcilePlanner planner;
-    private final TaskRepository taskRepository;
-
-    private static final Set<TaskStatus> ACTIVE_CREATE_STATUSES =
-            Set.of(TaskStatus.QUEUED, TaskStatus.RUNNING);
 
     @Transactional
     public PreparedReconcile prepare(ClaimedReconcileRequest claimed, ProviderObservation observation) {
