@@ -1,6 +1,6 @@
 # Polaris
 
-> Ghi chú đối chiếu 20/10/2026: tài liệu này chứa cả bối cảnh/roadmap từ kiến trúc cũ. Implementation hiện tại dùng CREATE_INSTANCE riêng và resource reconcile queue; audit/outbox/IAM đầy đủ chưa hoàn tất. Đọc [mục lục implementation](D:/Workspace/polaris/docs/features/README.md) để biết chức năng, source và trạng thái kiểm chứng thực tế.
+> Ghi chú đối chiếu 20/10/2026: tài liệu này chứa bối cảnh/roadmap từ kiến trúc cũ. Implementation hiện tại đã bỏ task engine và đưa CREATE/START/STOP/DELETE vào resource reconcile queue; audit/outbox/IAM đầy đủ chưa hoàn tất. Đọc [mục lục implementation](D:/Workspace/polaris/docs/features/README.md) để biết source và trạng thái kiểm chứng thực tế.
 
 **Polaris** là một **Lightweight Container Control Plane** dùng để quản lý vòng đời Docker container thông qua API, lấy cảm hứng từ các hệ thống như AWS ECS, Kubernetes control plane và các cloud platform thật.
 
