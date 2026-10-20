@@ -7,12 +7,12 @@ import com.cloud.polaris.instance.domain.DesiredState;
 import com.cloud.polaris.instance.domain.Instance;
 import com.cloud.polaris.instance.repository.InstanceRepository;
 import com.cloud.polaris.instance.service.InstanceCommandService;
-import com.cloud.polaris.instance.service.InstanceLifecycleService;
+import com.cloud.polaris.instance.service.InstanceProvisioningService;
 import com.cloud.polaris.provider.ComputeProvider;
 import com.cloud.polaris.provider.ProviderResource;
 import com.cloud.polaris.provider.ProviderResourceStatus;
 import com.cloud.polaris.reconcile.DeleteReconciler;
-import com.cloud.polaris.reconcile.InstanceReconciler;
+import com.cloud.polaris.reconcile.FailedProvisioningCleanupWorker;
 import com.cloud.polaris.reconcile.StartReconciler;
 import com.cloud.polaris.reconcile.StopReconciler;
 import com.cloud.polaris.task.domain.ClaimedTask;
@@ -66,7 +66,7 @@ class InstanceLifecycleSelfHealingIntegrationTest {
     @Autowired
     InstanceCommandService commandService;
     @Autowired
-    InstanceLifecycleService lifecycleService;
+    InstanceProvisioningService lifecycleService;
     @Autowired
     CreateInstanceHandler createHandler;
     @Autowired
@@ -97,7 +97,7 @@ class InstanceLifecycleSelfHealingIntegrationTest {
     @MockitoBean
     TaskRecovery taskRecovery;
     @MockitoBean
-    InstanceReconciler instanceReconciler;
+    FailedProvisioningCleanupWorker failedProvisioningCleanupWorker;
     @MockitoBean
     StopReconciler stopReconciler;
     @MockitoBean

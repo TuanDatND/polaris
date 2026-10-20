@@ -9,7 +9,7 @@ import com.cloud.polaris.instance.service.InstanceCommandService;
 import com.cloud.polaris.provider.ComputeProvider;
 import com.cloud.polaris.provider.ProviderResource;
 import com.cloud.polaris.provider.ProviderResourceStatus;
-import com.cloud.polaris.reconcile.InstanceReconciler;
+import com.cloud.polaris.reconcile.FailedProvisioningCleanupWorker;
 import com.cloud.polaris.task.domain.ClaimedTask;
 import com.cloud.polaris.task.domain.Task;
 import com.cloud.polaris.task.domain.TaskStatus;
@@ -68,7 +68,7 @@ class CreateInstanceSelfHealingIntegrationTest {
     @Autowired
     TaskExecutionService taskExecutionService;
     @Autowired
-    InstanceReconciler instanceReconciler;
+    FailedProvisioningCleanupWorker failedProvisioningCleanupWorker;
     @Autowired
     TenantRepository tenantRepository;
     @Autowired
@@ -203,7 +203,7 @@ class CreateInstanceSelfHealingIntegrationTest {
                 .orElseThrow();
         assertThat(beforeReconcile.getAllocatedInstanceCount()).isEqualTo(1);
 
-        instanceReconciler.reconcileFailedInstances();
+        failedProvisioningCleanupWorker.cleanupFailedInstances();
 
         Tenant afterReconcile = tenantRepository.findById(tenant.getId())
                 .orElseThrow();

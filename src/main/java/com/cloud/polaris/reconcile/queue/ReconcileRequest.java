@@ -71,6 +71,10 @@ public class ReconcileRequest {
             throw new IllegalArgumentException("Generation must be positive");
         }
 
+        if (status == ReconcileRequestStatus.COMPLETED) {
+            return;
+        }
+
         boolean newerGeneration = generation > requestedGeneration;
         requestedGeneration = Math.max(requestedGeneration, generation);
         if (status == ReconcileRequestStatus.RUNNING) {
@@ -133,10 +137,19 @@ public class ReconcileRequest {
 
     public void block(String error) {
         requireRunning();
-
         clearClaim();
+
         status = ReconcileRequestStatus.BLOCKED;
         lastError = error;
+    }
+
+    public void complete() {
+        requireRunning();
+        clearClaim();
+
+        status = ReconcileRequestStatus.COMPLETED;
+        failureCount = 0;
+        lastError = null;
     }
 
     public void assertClaimToken(UUID token) {

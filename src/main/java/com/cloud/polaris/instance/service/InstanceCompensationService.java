@@ -23,7 +23,7 @@ public class InstanceCompensationService {
     private final InstanceRepository instanceRepository;
     private final TenantRepository tenantRepository;
     private final TaskRepository taskRepository;
-    private final InstanceLifecycleService instanceLifecycleService;
+    private final InstanceProvisioningService instanceProvisioningService;
 
     @Transactional
     public void finalizeFailure(ClaimedTask claimedTask, String reason, boolean resourceAbsent) {
@@ -43,7 +43,7 @@ public class InstanceCompensationService {
         }
 
         if (instance.getCurrentState() != CurrentState.FAILED) {
-            instanceLifecycleService.markFailed(instance, reason);
+            instanceProvisioningService.markFailed(instance, reason);
         }
 
         if (resourceAbsent && instance.releaseQuota()) {

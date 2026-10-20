@@ -62,6 +62,7 @@ public interface ReconcileRequestRepository extends JpaRepository<ReconcileReque
                     ELSE reconcile_requests.last_error
                 END,
                 updated_at = EXCLUDED.updated_at
+                WHERE reconcile_requests.status <> 'COMPLETED'
             """, nativeQuery = true)
     void wake(
             @Param("instanceId") UUID instanceId,

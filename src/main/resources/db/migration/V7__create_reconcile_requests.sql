@@ -19,7 +19,12 @@ CREATE TABLE reconcile_requests
     updated_at           TIMESTAMPTZ NOT NULL DEFAULT now(),
 
     CONSTRAINT chk_reconcile_request_status
-        CHECK (status IN ('READY', 'RUNNING', 'BLOCKED')),
+        CHECK (status IN (
+                          'READY',
+                          'RUNNING',
+                          'BLOCKED',
+                          'COMPLETED'
+            )),
 
     CONSTRAINT chk_reconcile_request_generation_positive
         CHECK (requested_generation > 0),
