@@ -7,6 +7,7 @@ import com.cloud.polaris.provider.ProviderResourceStatus;
 import com.github.dockerjava.api.DockerClient;
 import com.github.dockerjava.api.command.CreateContainerResponse;
 import com.github.dockerjava.api.command.InspectContainerResponse;
+import com.github.dockerjava.api.exception.NotFoundException;
 import com.github.dockerjava.api.exception.NotModifiedException;
 import com.github.dockerjava.api.model.Container;
 import com.github.dockerjava.api.model.HostConfig;
@@ -26,8 +27,9 @@ public class DockerComputeProvider implements ComputeProvider {
 
     @Override
     public ProviderResource createContainer(CreateContainerRequest request) {
+
         HostConfig hostConfig = HostConfig.newHostConfig()
-                .withMemory(request.ramMb() * 1024L)
+                .withMemory(request.ramMb() * 1024L * 1024L)
                 .withCpuCount((long) request.cpuAllocated());
 
         CreateContainerResponse response = dockerClient
@@ -57,12 +59,24 @@ public class DockerComputeProvider implements ComputeProvider {
 
     @Override
     public void stop(String providerResourceId) {
-        dockerClient.stopContainerCmd(providerResourceId).exec();
+        try {
+            dockerClient.stopContainerCmd(providerResourceId)
+                    .exec();
+        } catch (NotModifiedException | NotFoundException ignored) {
+            // Resource đã dừng hoặc không còn tồn tại.
+            // Controller sẽ xác nhận lại bằng observation.
+        }
     }
 
     @Override
     public void delete(String providerResourceId) {
-        dockerClient.removeContainerCmd(providerResourceId).withForce(true).exec();
+        try {
+            dockerClient.removeContainerCmd(providerResourceId)
+                    .withForce(true)
+                    .exec();
+        } catch (NotFoundException ignored) {
+            // Resource đã bị xóa.
+        }
     }
 
     @Override

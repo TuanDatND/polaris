@@ -49,10 +49,16 @@ public class ReconcileFinalizationService {
             case NOOP -> {
                 projectConvergedState(instance, prepared);
                 instance.markObservedGeneration(prepared.generation());
+                if (instance.getCurrentState() == CurrentState.DELETED) {
+                    if (instance.isQuotaReleased()) {
+                        request.complete();
+                        yield false;
+                    }
+                    request.scheduleResync(now.plus(ACTION_RECHECK_DELAY));
+                    yield true;
+                }
                 request.scheduleResync(now.plus(RESYNC_DELAY));
-
-                yield instance.getCurrentState() == CurrentState.DELETED
-                        && !instance.isQuotaReleased();
+                yield false;
             }
 
             case START, STOP, DELETE -> {

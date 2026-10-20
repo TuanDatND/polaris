@@ -17,21 +17,21 @@ import java.util.UUID;
 @Component
 @RequiredArgsConstructor
 @Slf4j
-public class InstanceReconciler {
+public class FailedProvisioningCleanupWorker {
     private final InstanceRepository instanceRepository;
     private final ComputeProvider computeProvider;
     private final InstanceCompensationService cleanupService;
 
     @Scheduled(fixedDelay = 30_000)
-    public void reconcileFailedInstances() {
+    public void cleanupFailedInstances() {
         List<UUID> instanceIds = instanceRepository.findFailedInstanceIdsForCleanup(CurrentState.FAILED);
 
         for (UUID instanceId : instanceIds) {
             try{
-                reconcileOne(instanceId);
+                cleanupOne(instanceId);
             }catch(Exception exception){
                 log.error(
-                        "Failed to reconcile instance {}",
+                        "Failed to cleanup failed provisioning for instance {}",
                         instanceId,
                         exception
                 );
@@ -39,7 +39,7 @@ public class InstanceReconciler {
         }
     }
 
-    private void reconcileOne(UUID instanceId) {
+    private void cleanupOne(UUID instanceId) {
         Optional<ProviderResource> resource = computeProvider.findByInstanceId(instanceId);
 
         if (resource.isPresent()) {

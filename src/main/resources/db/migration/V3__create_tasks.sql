@@ -28,11 +28,7 @@ CREATE TABLE tasks
 
     CONSTRAINT chk_task_type
         CHECK (type IN (
-                        'CREATE_INSTANCE',
-                        'START_INSTANCE',
-                        'STOP_INSTANCE',
-                        'DELETE_INSTANCE',
-                        'RECONCILE_INSTANCE'
+                        'CREATE_INSTANCE'
             )),
 
     CONSTRAINT chk_task_status
@@ -65,3 +61,7 @@ CREATE INDEX idx_tasks_instance
 
 CREATE INDEX idx_tasks_tenant
     ON tasks (tenant_id);
+
+CREATE UNIQUE INDEX uq_one_active_task_per_instance
+    ON tasks (instance_id)
+    WHERE status IN ('QUEUED', 'RUNNING');

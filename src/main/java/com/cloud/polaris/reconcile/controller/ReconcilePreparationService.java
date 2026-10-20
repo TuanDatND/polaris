@@ -2,6 +2,7 @@ package com.cloud.polaris.reconcile.controller;
 
 import com.cloud.polaris.common.exception.ResourceNotFoundException;
 import com.cloud.polaris.instance.domain.CurrentState;
+import com.cloud.polaris.instance.domain.DesiredState;
 import com.cloud.polaris.instance.domain.Instance;
 import com.cloud.polaris.instance.domain.InstanceStateMachine;
 import com.cloud.polaris.instance.repository.InstanceRepository;
@@ -91,7 +92,13 @@ public class ReconcilePreparationService {
             );
 
             case STOP -> {
-                if (instance.getCurrentState() != CurrentState.DELETING) {
+                if (instance.getCurrentState() == CurrentState.FAILED
+                        && instance.getDesiredState() == DesiredState.DELETED) {
+                    stateMachine.transitionIfNecessary(
+                            instance,
+                            CurrentState.DELETING
+                    );
+                } else if (instance.getCurrentState() != CurrentState.DELETING) {
                     stateMachine.transitionIfNecessary(
                             instance,
                             CurrentState.STOPPING

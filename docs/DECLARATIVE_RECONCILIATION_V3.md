@@ -1,5 +1,7 @@
 # Polaris Declarative Reconciliation V3 — System Design
 
+> Ghi chú đối chiếu 20/10/2026: đây là proposal/design được giữ để giải thích quyết định kiến trúc. Các đoạn nói về RepairService, lifecycle task cũ, trạng thái migration hoặc bảo đảm idempotency phải được đối chiếu lại với source. Bản mô tả code hiện tại nằm ở [V3 implementation](D:/Workspace/polaris/docs/features/declarative-reconciliation-v3.md), có COMPLETED, provisioning-only create và các giới hạn còn lại.
+
 ## 1. Requirement Understanding
 
 Polaris cần chuyển lifecycle của instance từ command queue:
