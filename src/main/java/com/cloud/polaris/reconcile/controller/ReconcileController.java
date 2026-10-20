@@ -1,10 +1,11 @@
 package com.cloud.polaris.reconcile.controller;
 
 import com.cloud.polaris.common.exception.StaleReconcileRequestOwnerException;
-import com.cloud.polaris.instance.service.InstanceCompensationService;
+import com.cloud.polaris.provider.NonRetryableProviderException;
 import com.cloud.polaris.reconcile.domain.ProviderObservation;
 import com.cloud.polaris.reconcile.domain.ReconcileDecision;
 import com.cloud.polaris.reconcile.executor.ReconcileActionExecutor;
+import com.cloud.polaris.reconcile.executor.ReconcileActionResult;
 import com.cloud.polaris.reconcile.observer.InstanceProviderObserver;
 import com.cloud.polaris.reconcile.queue.ClaimedReconcileRequest;
 import com.cloud.polaris.reconcile.queue.ReconcileQueueService;
@@ -26,30 +27,43 @@ public class ReconcileController {
     private final ReconcileActionExecutor actionExecutor;
     private final ReconcileFinalizationService finalizationService;
     private final ReconcileQueueService reconcileQueueService;
-    private final InstanceCompensationService compensationService;
 
     public void reconcile(ClaimedReconcileRequest claimed) {
+        PreparedReconcile prepared = null;
         try {
             ProviderObservation observation = observer.observe(claimed.instanceId());
-            PreparedReconcile prepared = preparationService.prepare(claimed, observation);
+            prepared = preparationService.prepare(claimed, observation);
+            ReconcileActionResult result = ReconcileActionResult.none();
             if (requiresProviderAction(prepared.decision())) {
-                actionExecutor.execute(prepared);
+                if (!preparationService.executionStillCurrent(claimed, prepared)) {
+                    return;
+                }
+                result = actionExecutor.execute(prepared);
             }
-            boolean quotaReleaseRequired = finalizationService.complete(claimed, prepared);
-
-            if (quotaReleaseRequired) {
-                compensationService.releaseQuotaIfCleanupCompleted(claimed.instanceId());
-            }
+            finalizationService.complete(claimed, prepared, result);
 
         } catch (StaleReconcileRequestOwnerException exception) {
             log.debug("Reconcile request {} is no longer owned by this worker", claimed.instanceId());
+        } catch (NonRetryableProviderException exception) {
+            if (prepared == null) {
+                handleFailure(claimed, exception);
+                return;
+            }
+            try {
+                finalizationService.block(claimed, prepared, summarize(exception));
+            } catch (StaleReconcileRequestOwnerException staleOwner) {
+                log.debug("Reconcile request {} is no longer owned by this worker", claimed.instanceId());
+            } catch (Exception finalizationFailure) {
+                handleFailure(claimed, finalizationFailure);
+            }
         } catch (Exception exception) {
             handleFailure(claimed, exception);
         }
     }
 
     private boolean requiresProviderAction(ReconcileDecision decision) {
-        return decision == ReconcileDecision.START
+        return decision == ReconcileDecision.CREATE
+                || decision == ReconcileDecision.START
                 || decision == ReconcileDecision.STOP
                 || decision == ReconcileDecision.DELETE;
     }

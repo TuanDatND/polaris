@@ -8,12 +8,18 @@ import com.cloud.polaris.instance.repository.InstanceRepository;
 import com.cloud.polaris.reconcile.queue.ClaimedReconcileRequest;
 import com.cloud.polaris.reconcile.queue.ReconcileRequest;
 import com.cloud.polaris.reconcile.queue.ReconcileRequestRepository;
+import com.cloud.polaris.reconcile.domain.ProviderObservedState;
+import com.cloud.polaris.reconcile.domain.ReconcileDecision;
+import com.cloud.polaris.reconcile.executor.ReconcileActionResult;
+import com.cloud.polaris.tenant.domain.Tenant;
+import com.cloud.polaris.tenant.repository.TenantRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -27,9 +33,20 @@ public class ReconcileFinalizationService {
     private final InstanceRepository instanceRepository;
     private final ReconcileRequestRepository reconcileRequestRepository;
     private final InstanceStateMachine stateMachine;
+    private final TenantRepository tenantRepository;
 
     @Transactional
-    public boolean complete(ClaimedReconcileRequest claimed, PreparedReconcile prepared) {
+    public void complete(
+            ClaimedReconcileRequest claimed,
+            PreparedReconcile prepared,
+            ReconcileActionResult actionResult
+    ) {
+        // Follow command lock order: tenant -> instance -> request.
+        // Read only the immutable tenant id before taking any entity locks.
+        UUID tenantId = instanceRepository.findTenantIdByInstanceId(claimed.instanceId())
+                .orElseThrow(() -> new ResourceNotFoundException("Instance not found: " + claimed.instanceId()));
+        Tenant tenant = tenantRepository.findByIdForUpdate(tenantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Tenant not found: " + tenantId));
         Instance instance = instanceRepository.findByIdForUpdate(claimed.instanceId()).orElseThrow(
                 () -> new ResourceNotFoundException("Instance not found" + claimed.instanceId())
         );
@@ -38,44 +55,71 @@ public class ReconcileFinalizationService {
 
         request.assertClaimToken(claimed.claimToken());
 
+        // Successful CREATE is a provider fact, even if intent changed during I/O.
+        // Retain it so the next cycle adopts or deletes the resource instead of recreating it.
+        if (prepared.decision() == ReconcileDecision.CREATE) {
+            instance.recordProvisioned(actionResult.createdResourceId());
+        }
+
         Instant now = Instant.now();
 
         if (instance.getGeneration() != prepared.generation() || request.getRequestedGeneration() != prepared.generation()) {
             request.scheduleResync(now);
-            return false;
+            return;
         }
 
-        return switch (prepared.decision()) {
+        switch (prepared.decision()) {
             case NOOP -> {
                 projectConvergedState(instance, prepared);
                 instance.markObservedGeneration(prepared.generation());
+                instance.clearFailure();
+
                 if (instance.getCurrentState() == CurrentState.DELETED) {
-                    if (instance.isQuotaReleased()) {
-                        request.complete();
-                        yield false;
+                    if (prepared.observedState() != ProviderObservedState.MISSING) {
+                        throw new IllegalStateException("Deletion requires a MISSING provider observation");
                     }
-                    request.scheduleResync(now.plus(ACTION_RECHECK_DELAY));
-                    yield true;
+                    if (instance.releaseQuota()) {
+                        tenant.release(instance.getCpuAllocated(), instance.getRamMb());
+                    }
+                    request.complete();
+                } else {
+                    request.scheduleResync(now.plus(RESYNC_DELAY));
                 }
-                request.scheduleResync(now.plus(RESYNC_DELAY));
-                yield false;
             }
 
-            case START, STOP, DELETE -> {
+            case CREATE, START, STOP, DELETE -> {
                 request.scheduleResync(now.plus(ACTION_RECHECK_DELAY));
-                yield false;
             }
 
             case WAIT -> {
                 request.scheduleResync(now.plus(WAIT_RECHECK_DELAY));
-                yield false;
             }
 
             case INVALID -> {
-                request.block("Invalid desired/current/observed state combination");
-                yield false;
+                String reason = "Invalid reconciliation state: desired=" + instance.getDesiredState()
+                        + ", current=" + instance.getCurrentState()
+                        + ", observed=" + prepared.observedState()
+                        + ", provisioned=" + instance.isProvisioned();
+                instance.recordFailure(reason);
+                request.block(reason);
             }
-        };
+        }
+    }
+
+    @Transactional
+    public void block(ClaimedReconcileRequest claimed, PreparedReconcile prepared, String reason) {
+        Instance instance = instanceRepository.findByIdForUpdate(claimed.instanceId())
+                .orElseThrow(() -> new ResourceNotFoundException("Instance not found: " + claimed.instanceId()));
+        ReconcileRequest request = reconcileRequestRepository.findByInstanceIdForUpdate(claimed.instanceId())
+                .orElseThrow(() -> new ResourceNotFoundException("Reconcile request not found: " + claimed.instanceId()));
+        request.assertClaimToken(claimed.claimToken());
+        if (instance.getGeneration() != prepared.generation()
+                || request.getRequestedGeneration() != prepared.generation()) {
+            request.scheduleResync(Instant.now());
+            return;
+        }
+        instance.recordFailure(reason);
+        request.block(reason);
     }
 
     private void projectConvergedState(Instance instance, PreparedReconcile prepared) {
@@ -112,7 +156,8 @@ public class ReconcileFinalizationService {
                 stateMachine.transition(instance, CurrentState.STOPPING);
                 stateMachine.transition(instance, CurrentState.STOPPED);
             }
-            case STARTING, STOPPING -> stateMachine.transition(instance, CurrentState.STOPPED);
+            case PENDING, PROVISIONING, STARTING, STOPPING ->
+                    stateMachine.transition(instance, CurrentState.STOPPED);
             case STOPPED -> {
                 // Already converged.
             }
@@ -137,7 +182,7 @@ public class ReconcileFinalizationService {
                 stateMachine.transition(instance, CurrentState.DELETING);
                 stateMachine.transition(instance, CurrentState.DELETED);
             }
-            case RUNNING, STOPPED, FAILED -> {
+            case PENDING, PROVISIONING, RUNNING, STOPPED, FAILED -> {
                 stateMachine.transition(instance, CurrentState.DELETING);
                 stateMachine.transition(instance, CurrentState.DELETED);
             }

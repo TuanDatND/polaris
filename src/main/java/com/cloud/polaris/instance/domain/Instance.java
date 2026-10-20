@@ -65,6 +65,9 @@ public class Instance {
     @Column(name = "quota_released", nullable = false)
     private boolean quotaReleased;
 
+    @Column(name = "provisioned", nullable = false)
+    private boolean provisioned;
+
     @Version
     @Column(name = "version", nullable = false)
     private Long version;
@@ -120,8 +123,20 @@ public class Instance {
         this.containerId = null;
     }
 
+    public void recordProvisioned(String providerResourceId) {
+        if (providerResourceId == null || providerResourceId.isBlank()) {
+            throw new IllegalArgumentException("Provider resource id must not be blank");
+        }
+        provisioned = true;
+        attachContainer(providerResourceId);
+    }
+
     public void recordFailure(String reason) {
         this.failureReason = reason;
+    }
+
+    public void clearFailure() {
+        this.failureReason = null;
     }
 
     public boolean releaseQuota() {
