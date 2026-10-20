@@ -26,6 +26,7 @@ public class ReconcilePreparationService {
     private final InstanceStateMachine stateMachine;
     private final InstanceReconcilePlanner planner;
 
+
     @Transactional
     public PreparedReconcile prepare(ClaimedReconcileRequest claimed, ProviderObservation observation) {
         Instance instance = instanceRepository
