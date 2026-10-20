@@ -8,7 +8,6 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -31,15 +30,8 @@ public interface InstanceRepository extends JpaRepository<Instance, UUID> {
             @Param("tenantId") UUID tenantId
     );
 
-    @Query("""
-                select i.id
-                from Instance i
-                where i.currentState = :state
-                  and i.desiredState <> 'DELETED'
-                  and i.quotaReleased = false
-            """)
-    List<UUID> findFailedInstanceIdsForCleanup(
-            @Param("state") CurrentState state
-    );
+    @Query("select i.tenant.id from Instance i where i.id = :id")
+    Optional<UUID> findTenantIdByInstanceId(@Param("id") UUID id);
 
 }
+

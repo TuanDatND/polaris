@@ -7,6 +7,6 @@ public record InstanceSnapshot(
         DesiredState desiredState,
         CurrentState currentState,
         ProviderObservedState observedState,
-        boolean provisioningActive
+        boolean provisioned
 ) {
 }
