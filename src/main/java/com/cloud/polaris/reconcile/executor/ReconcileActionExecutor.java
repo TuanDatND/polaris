@@ -4,5 +4,5 @@ import com.cloud.polaris.reconcile.controller.PreparedReconcile;
 
 public interface ReconcileActionExecutor {
 
-    void execute(PreparedReconcile prepared);
+    ReconcileActionResult execute(PreparedReconcile prepared);
 }

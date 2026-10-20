@@ -1,6 +1,7 @@
 package com.cloud.polaris.provider.docker;
 
 import com.cloud.polaris.provider.ComputeProvider;
+import com.cloud.polaris.provider.NonRetryableProviderException;
 import com.cloud.polaris.provider.CreateContainerRequest;
 import com.cloud.polaris.provider.ProviderResource;
 import com.cloud.polaris.provider.ProviderResourceStatus;
@@ -8,6 +9,7 @@ import com.github.dockerjava.api.DockerClient;
 import com.github.dockerjava.api.command.CreateContainerResponse;
 import com.github.dockerjava.api.command.InspectContainerResponse;
 import com.github.dockerjava.api.exception.NotFoundException;
+import com.github.dockerjava.api.exception.BadRequestException;
 import com.github.dockerjava.api.exception.NotModifiedException;
 import com.github.dockerjava.api.model.Container;
 import com.github.dockerjava.api.model.HostConfig;
@@ -32,14 +34,20 @@ public class DockerComputeProvider implements ComputeProvider {
                 .withMemory(request.ramMb() * 1024L * 1024L)
                 .withCpuCount((long) request.cpuAllocated());
 
-        CreateContainerResponse response = dockerClient
-                .createContainerCmd(request.imageName())
-                .withName(request.name())
-                .withLabels(request.labels())
-                .withHostConfig(hostConfig)
-                .exec();
-
-        return new ProviderResource(response.getId(), request.name(), ProviderResourceStatus.CREATED);
+        try {
+            CreateContainerResponse response = dockerClient
+                    .createContainerCmd(request.imageName())
+                    .withName(request.name())
+                    .withLabels(request.labels())
+                    .withHostConfig(hostConfig)
+                    .exec();
+            return new ProviderResource(response.getId(), request.name(), ProviderResourceStatus.CREATED);
+        } catch (NotFoundException | BadRequestException exception) {
+            throw new NonRetryableProviderException(
+                    "Cannot provision image " + request.imageName() + ": " + exception.getMessage(),
+                    exception
+            );
+        }
     }
 
     @Override

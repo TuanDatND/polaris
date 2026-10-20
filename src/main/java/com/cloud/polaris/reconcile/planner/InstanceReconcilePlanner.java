@@ -17,16 +17,20 @@ public final class InstanceReconcilePlanner {
             return ReconcileDecision.INVALID;
         }
 
-        if (snapshot.provisioningActive()) {
-            return ReconcileDecision.WAIT;
-        }
-
         if (snapshot.observedState() == ProviderObservedState.UNKNOWN) {
             return ReconcileDecision.WAIT;
         }
 
         if (snapshot.currentState() == CurrentState.FAILED && snapshot.desiredState() != DesiredState.DELETED) {
             return ReconcileDecision.INVALID;
+        }
+
+        if (snapshot.observedState() == ProviderObservedState.MISSING
+                && snapshot.desiredState() != DesiredState.DELETED
+                && !snapshot.provisioned()
+                && (snapshot.currentState() == CurrentState.PENDING
+                    || snapshot.currentState() == CurrentState.PROVISIONING)) {
+            return ReconcileDecision.CREATE;
         }
 
         return switch (snapshot.desiredState()) {

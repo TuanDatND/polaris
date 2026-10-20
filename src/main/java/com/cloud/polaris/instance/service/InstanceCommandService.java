@@ -8,12 +8,8 @@ import com.cloud.polaris.instance.domain.CurrentState;
 import com.cloud.polaris.instance.domain.Instance;
 import com.cloud.polaris.instance.repository.InstanceRepository;
 import com.cloud.polaris.reconcile.queue.ReconcileQueueService;
-import com.cloud.polaris.task.domain.Task;
-import com.cloud.polaris.task.repository.TaskRepository;
 import com.cloud.polaris.tenant.domain.Tenant;
 import com.cloud.polaris.tenant.repository.TenantRepository;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,7 +23,6 @@ public class InstanceCommandService {
     private final ReconcileQueueService reconcileQueueService;
     private final InstanceRepository instanceRepository;
     private final TenantRepository tenantRepository;
-    private final TaskRepository taskRepository;
 
     @Transactional
     public InstanceResponse createInstance(UUID tenantId, CreateInstanceRequest request) {
@@ -49,14 +44,6 @@ public class InstanceCommandService {
                         request.ramMb())
         );
 
-        ObjectNode payload = JsonNodeFactory.instance.objectNode()
-                .put("name", instance.getName())
-                .put("imageName", instance.getImageName())
-                .put("cpuAllocated", instance.getCpuAllocated())
-                .put("ramMb", instance.getRamMb());
-
-        Task task = Task.createInstanceTask(tenant, instance, payload);
-        taskRepository.save(task);
         reconcileQueueService.wake(
                 instance.getId(),
                 instance.getGeneration()
