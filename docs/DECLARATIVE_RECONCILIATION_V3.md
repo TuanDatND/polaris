@@ -1,6 +1,6 @@
 # Polaris Declarative Reconciliation V3 — System Design
 
-> Ghi chú đối chiếu 20/10/2026: đây là proposal/design được giữ để giải thích quyết định kiến trúc. Các đoạn nói về RepairService, lifecycle task cũ, trạng thái migration hoặc bảo đảm idempotency phải được đối chiếu lại với source. Bản mô tả code hiện tại nằm ở [V3 implementation](D:/Workspace/polaris/docs/features/declarative-reconciliation-v3.md), có COMPLETED, provisioning-only create và các giới hạn còn lại.
+> Ghi chú đối chiếu 20/10/2026: đây là proposal/design lịch sử. Implementation hiện tại đã bỏ cả CREATE_INSTANCE task, đưa CREATE vào reconcile, thêm provisioned marker và finalize quota/COMPLETED atomically. Các phần task, event, migration và failure policy bên dưới không còn mô tả runtime mới. Đọc [V3 implementation](D:/Workspace/polaris/docs/features/declarative-reconciliation-v3.md) để xem code và giới hạn hiện tại.
 
 ## 1. Requirement Understanding
 
