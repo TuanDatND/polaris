@@ -95,6 +95,7 @@ public class Instance {
 
 
     public boolean requestStart() {
+
         return changeDesiredState(DesiredState.RUNNING);
     }
 

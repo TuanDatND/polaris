@@ -1,6 +1,6 @@
 package com.cloud.polaris.task.handler;
 
-import com.cloud.polaris.instance.service.InstanceLifecycleService;
+import com.cloud.polaris.instance.service.InstanceProvisioningService;
 import com.cloud.polaris.provider.ComputeProvider;
 import com.cloud.polaris.provider.CreateContainerRequest;
 import com.cloud.polaris.provider.ProviderResource;
@@ -19,7 +19,7 @@ import java.util.Map;
 public class CreateInstanceHandler implements TaskHandler {
 
     private final ComputeProvider computeProvider;
-    private final InstanceLifecycleService instanceLifecycleService;
+    private final InstanceProvisioningService instanceProvisioningService;
 
     @Override
     public TaskType supportedType() {
@@ -33,8 +33,8 @@ public class CreateInstanceHandler implements TaskHandler {
 
 
         if (resource == null) {
-            instanceLifecycleService.ensureProvisioning(
-                    task.instanceId()
+            instanceProvisioningService.ensureProvisioning(
+                    task
             );
 
             resource = computeProvider.createContainer(
@@ -52,7 +52,7 @@ public class CreateInstanceHandler implements TaskHandler {
         if (resource.status() == ProviderResourceStatus.UNKNOWN) {
             throw new IllegalStateException("Cannot complete provisioning because provider state is unknown");
         }
-        instanceLifecycleService.completeProvisioning(
+        instanceProvisioningService.completeProvisioning(
                 task,
                 resource.providerResourceId()
         );

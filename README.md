@@ -7,8 +7,8 @@
 - Docker compute provider abstraction
 - State machine for instance lifecycle safety
 - Reconciliation loop for drift detection and repair
-- Idempotency for safe client retries
-- Metrics and health checks with Actuator, Micrometer and Prometheus
+- Create-task deduplication and idempotent desired-state updates
+- Actuator health endpoint and Micrometer/Prometheus dependencies
 
 ## Tech Stack
 
@@ -25,4 +25,21 @@
 - JUnit 5 + Testcontainers
 - Gradle Kotlin DSL
 
-> Built Polaris, a lightweight container control plane inspired by AWS ECS/Kubernetes, enabling multi-tenant Docker instance management with quota admission control, desired/current state modeling, asynchronous task execution, reconciliation, audit logging, outbox events, idempotency, and Prometheus-based observability.
+> Polaris is a lightweight Docker container control plane with tenant quota admission, asynchronous provisioning, and declarative lifecycle reconciliation. Authentication currently uses sessions and CSRF; tenant authorization, audit logging, transactional outbox, and custom reconciliation metrics remain unfinished.
+
+## Tài liệu implementation
+
+Bắt đầu từ [mục lục tính năng](D:/Workspace/polaris/docs/features/README.md), đối chiếu source ngày 20/10/2026. Mỗi tài liệu giải thích mục đích, công nghệ, luồng hoạt động, transaction/concurrency, cách kiểm chứng và giới hạn hiện tại.
+
+- [Tenant và quota](D:/Workspace/polaris/docs/features/tenant-and-quota.md)
+- [Instance API](D:/Workspace/polaris/docs/features/instance-api.md)
+- [Provisioning task engine](D:/Workspace/polaris/docs/features/provisioning-task-engine.md)
+- [Declarative reconciliation V3](D:/Workspace/polaris/docs/features/declarative-reconciliation-v3.md)
+- [Failure cleanup và quota release](D:/Workspace/polaris/docs/features/failure-cleanup-and-quota-release.md)
+- [Docker compute provider](D:/Workspace/polaris/docs/features/docker-compute-provider.md)
+- [Authentication và IAM](D:/Workspace/polaris/docs/features/authentication-and-iam.md)
+- [Database schema thực tế](D:/Workspace/polaris/docs/features/database-schema.md)
+- [Chạy local, kiểm chứng và observability](D:/Workspace/polaris/docs/features/local-runtime-and-observability.md)
+- [Postman collection và cách chạy](D:/Workspace/polaris/docs/postman/v1/README.md)
+
+Người dùng đã báo flow Postman lifecycle pass trên local; toàn bộ automated test suite chưa được xác nhận và còn test tham chiếu kiến trúc legacy. Các tài liệu design cũ mô tả cả roadmap, không phải danh sách tính năng đã triển khai. Thư mục docs/features hiện bị Git ignore; các link tài liệu mới chỉ có đủ đích trong workspace local cho đến khi được đưa vào Git.
