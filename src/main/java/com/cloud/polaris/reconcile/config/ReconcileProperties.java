@@ -1,8 +1,7 @@
 package com.cloud.polaris.reconcile.config;
 
-import org.springframework.boot.context.properties.ConfigurationProperties;
-
 import java.time.Duration;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties(prefix ="polaris.reconcile")
 public record ReconcileProperties(

@@ -1,14 +1,13 @@
 package com.cloud.polaris.instance.domain;
 
-import com.cloud.polaris.common.exception.IllegalStateTransitionException;
+import com.cloud.polaris.instance.exception.IllegalStateTransitionException;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
-
-import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 

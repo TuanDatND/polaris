@@ -3,12 +3,11 @@ package com.cloud.polaris.instance.domain;
 import com.cloud.polaris.reconcile.domain.ProviderObservedState;
 import com.cloud.polaris.tenant.domain.Tenant;
 import jakarta.persistence.*;
+import java.time.Instant;
+import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-
-import java.time.Instant;
-import java.util.UUID;
 
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Getter

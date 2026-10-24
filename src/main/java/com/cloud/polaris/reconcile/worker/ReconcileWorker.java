@@ -1,8 +1,8 @@
 package com.cloud.polaris.reconcile.worker;
 
 import com.cloud.polaris.reconcile.config.ReconcileProperties;
-import com.cloud.polaris.reconcile.controller.ReconcileController;
-import com.cloud.polaris.reconcile.queue.ReconcileQueueService;
+import com.cloud.polaris.reconcile.service.ReconcileOrchestrator;
+import com.cloud.polaris.reconcile.service.ReconcileQueueService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -19,7 +19,7 @@ import org.springframework.stereotype.Component;
 public class ReconcileWorker {
 
     private final ReconcileQueueService reconcileQueueService;
-    private final ReconcileController reconcileController;
+    private final ReconcileOrchestrator reconcileController;
     private final ReconcileProperties reconcileProperties;
 
     @Scheduled(fixedDelayString = "${polaris.reconcile.poll-interval:1s}")

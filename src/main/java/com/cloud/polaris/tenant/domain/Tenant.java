@@ -1,16 +1,15 @@
 package com.cloud.polaris.tenant.domain;
 
-import com.cloud.polaris.common.exception.QuotaExceededException;
 import com.cloud.polaris.instance.domain.Instance;
+import com.cloud.polaris.tenant.exception.QuotaExceededException;
 import jakarta.persistence.*;
+import java.time.Instant;
+import java.util.List;
+import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
-import java.time.Instant;
-import java.util.List;
-import java.util.UUID;
 
 @Entity
 @NoArgsConstructor(access = AccessLevel.PROTECTED)

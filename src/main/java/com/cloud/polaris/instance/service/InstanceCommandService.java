@@ -7,14 +7,13 @@ import com.cloud.polaris.instance.api.InstanceResponse;
 import com.cloud.polaris.instance.domain.CurrentState;
 import com.cloud.polaris.instance.domain.Instance;
 import com.cloud.polaris.instance.repository.InstanceRepository;
-import com.cloud.polaris.reconcile.queue.ReconcileQueueService;
+import com.cloud.polaris.reconcile.service.ReconcileQueueService;
 import com.cloud.polaris.tenant.domain.Tenant;
 import com.cloud.polaris.tenant.repository.TenantRepository;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor

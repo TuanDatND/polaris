@@ -3,7 +3,7 @@ package com.cloud.polaris.instance.api;
 import com.cloud.polaris.instance.domain.CurrentState;
 import com.cloud.polaris.instance.domain.DesiredState;
 import com.cloud.polaris.instance.domain.Instance;
-
+import com.cloud.polaris.reconcile.domain.ProviderObservedState;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -18,6 +18,12 @@ public record InstanceResponse(
         CurrentState currentState,
         String containerId,
         String failureReason,
+        long generation,
+        long observedGeneration,
+        ProviderObservedState lastObservedState,
+        Instant lastObservedAt,
+        boolean provisioned,
+        boolean quotaReleased,
         Instant createdAt,
         Instant updatedAt
 ) {
@@ -33,6 +39,12 @@ public record InstanceResponse(
                 instance.getCurrentState(),
                 instance.getContainerId(),
                 instance.getFailureReason(),
+                instance.getGeneration(),
+                instance.getObservedGeneration(),
+                instance.getLastObservedState(),
+                instance.getLastObservedAt(),
+                instance.isProvisioned(),
+                instance.isQuotaReleased(),
                 instance.getCreatedAt(),
                 instance.getUpdatedAt()
         );

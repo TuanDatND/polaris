@@ -1,11 +1,9 @@
 package com.cloud.polaris.instance.domain;
 
-
-import com.cloud.polaris.common.exception.IllegalStateTransitionException;
-import org.springframework.stereotype.Component;
-
+import com.cloud.polaris.instance.exception.IllegalStateTransitionException;
 import java.util.Map;
 import java.util.Set;
+import org.springframework.stereotype.Component;
 
 @Component
 public class InstanceStateMachine {

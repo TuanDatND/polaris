@@ -2,6 +2,8 @@ package com.cloud.polaris.security.user.service;
 
 import com.cloud.polaris.security.user.domain.AppUser;
 import com.cloud.polaris.security.user.repository.AppUserRepository;
+import java.util.Collections;
+import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -9,9 +11,6 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.Collections;
-import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor

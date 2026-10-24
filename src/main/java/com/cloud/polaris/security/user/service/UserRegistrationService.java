@@ -2,7 +2,7 @@ package com.cloud.polaris.security.user.service;
 
 import com.cloud.polaris.common.exception.DuplicateResourceException;
 import com.cloud.polaris.common.exception.ResourceNotFoundException;
-import com.cloud.polaris.security.iam.domain.entity.TenantMembership;
+import com.cloud.polaris.security.iam.domain.TenantMembership;
 import com.cloud.polaris.security.iam.repository.TenantMembershipRepository;
 import com.cloud.polaris.security.user.api.RegisterUserRequest;
 import com.cloud.polaris.security.user.api.UserResponse;
@@ -10,12 +10,11 @@ import com.cloud.polaris.security.user.domain.AppUser;
 import com.cloud.polaris.security.user.repository.AppUserRepository;
 import com.cloud.polaris.tenant.domain.Tenant;
 import com.cloud.polaris.tenant.repository.TenantRepository;
+import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor

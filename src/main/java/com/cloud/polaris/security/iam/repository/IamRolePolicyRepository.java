@@ -1,11 +1,10 @@
 package com.cloud.polaris.security.iam.repository;
 
-import com.cloud.polaris.security.iam.domain.composite.IamRolePolicy;
+import com.cloud.polaris.security.iam.domain.IamRolePolicy;
 import com.cloud.polaris.security.iam.domain.id.RolePolicyId;
-import org.springframework.data.jpa.repository.JpaRepository;
-
 import java.util.List;
 import java.util.UUID;
+import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface IamRolePolicyRepository extends JpaRepository<IamRolePolicy, RolePolicyId> {
 
