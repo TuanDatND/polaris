@@ -23,6 +23,14 @@ public class InstanceController {
         return instanceQueryService.getInstance(tenantId, id);
     }
 
+    @GetMapping("/{id}/reconciliation")
+    public InstanceReconciliationResponse getReconciliation(
+            @RequestHeader("X-Tenant-Id") UUID tenantId,
+            @PathVariable UUID id
+    ) {
+        return instanceQueryService.getReconciliation(tenantId, id);
+    }
+
     @PostMapping
     @ResponseStatus(HttpStatus.ACCEPTED)
     public InstanceResponse createInstance(
