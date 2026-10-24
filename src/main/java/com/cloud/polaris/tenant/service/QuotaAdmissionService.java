@@ -3,11 +3,10 @@ package com.cloud.polaris.tenant.service;
 import com.cloud.polaris.common.exception.ResourceNotFoundException;
 import com.cloud.polaris.tenant.domain.Tenant;
 import com.cloud.polaris.tenant.repository.TenantRepository;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor

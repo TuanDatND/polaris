@@ -2,16 +2,16 @@ package com.cloud.polaris.instance.api;
 
 import com.cloud.polaris.instance.domain.CurrentState;
 import com.cloud.polaris.instance.repository.InstanceRepository;
-import com.cloud.polaris.reconcile.controller.ReconcileController;
-import com.cloud.polaris.reconcile.queue.ClaimedReconcileRequest;
-import com.cloud.polaris.reconcile.queue.ReconcileQueueService;
-import com.cloud.polaris.reconcile.queue.ReconcileRequestRepository;
-import com.cloud.polaris.task.repository.TaskRepository;
-import com.cloud.polaris.task.worker.TaskRecovery;
-import com.cloud.polaris.task.worker.TaskWorker;
+import com.cloud.polaris.reconcile.repository.ReconcileRequestRepository;
+import com.cloud.polaris.reconcile.service.ReconcileOrchestrator;
+import com.cloud.polaris.reconcile.service.ReconcileQueueService;
+import com.cloud.polaris.reconcile.service.model.ClaimedReconcileRequest;
 import com.cloud.polaris.tenant.repository.TenantRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.Duration;
+import java.util.Optional;
+import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,18 +27,12 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-import java.time.Duration;
-import java.util.Optional;
-import java.util.UUID;
-
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.when;
 
 @Testcontainers
 @SpringBootTest(properties = {
@@ -65,13 +59,11 @@ class InstanceDeleteEndToEndIntegrationTest {
     @Autowired
     ReconcileQueueService reconcileQueueService;
     @Autowired
-    ReconcileController reconcileController;
+    ReconcileOrchestrator reconcileController;
     @Autowired
     TenantRepository tenantRepository;
     @Autowired
     InstanceRepository instanceRepository;
-    @Autowired
-    TaskRepository taskRepository;
     @Autowired
     ReconcileRequestRepository reconcileRequestRepository;
     @Autowired
@@ -79,15 +71,11 @@ class InstanceDeleteEndToEndIntegrationTest {
 
     @MockitoBean
     com.cloud.polaris.provider.ComputeProvider computeProvider;
-    @MockitoBean
-    TaskWorker taskWorker;
-    @MockitoBean
-    TaskRecovery taskRecovery;
+
 
     @AfterEach
     void cleanDatabase() {
         reconcileRequestRepository.deleteAll();
-        taskRepository.deleteAll();
         instanceRepository.deleteAll();
         tenantRepository.deleteAll();
     }

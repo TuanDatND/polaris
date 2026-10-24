@@ -2,9 +2,8 @@ package com.cloud.polaris.instance.domain;
 
 import com.cloud.polaris.reconcile.domain.ProviderObservedState;
 import com.cloud.polaris.tenant.domain.Tenant;
-import org.junit.jupiter.api.Test;
-
 import java.time.Instant;
+import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;

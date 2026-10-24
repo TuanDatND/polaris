@@ -1,7 +1,10 @@
 package com.cloud.polaris.security.oauth2.service;
 
-import com.cloud.polaris.security.oauth2.entity.OAuth2AuthorizationConsentEntity;
+import com.cloud.polaris.security.oauth2.domain.OAuth2AuthorizationConsentEntity;
 import com.cloud.polaris.security.oauth2.repository.OAuth2AuthorizationConsentEntityRepository;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import org.springframework.security.core.GrantedAuthority;
@@ -9,10 +12,6 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationConsent;
 import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationConsentService;
 import org.springframework.stereotype.Service;
-
-import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 @Service

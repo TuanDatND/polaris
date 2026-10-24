@@ -1,6 +1,6 @@
 package com.cloud.polaris.reconcile.config;
 
-import com.cloud.polaris.reconcile.planner.InstanceReconcilePlanner;
+import com.cloud.polaris.reconcile.domain.InstanceReconcilePlanner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
