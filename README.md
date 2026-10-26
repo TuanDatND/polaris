@@ -43,3 +43,4 @@ Bắt đầu từ [mục lục tính năng](D:/Workspace/polaris/docs/features/R
 - [Postman collection và cách chạy](D:/Workspace/polaris/docs/postman/v1/README.md)
 
 Main source/resources của flow không còn task đã build thành công. Báo cáo Postman pass trước đây thuộc flow trước khi chuyển CREATE vào reconcile; runtime mới và automated test suite chưa được xác nhận, test cũ còn tham chiếu task đã xóa. Các tài liệu design cũ mô tả cả roadmap, không phải danh sách tính năng đã triển khai. Thư mục docs/features hiện bị Git ignore; các link tài liệu mới chỉ có đủ đích trong workspace local cho đến khi được đưa vào Git.
+hehe
