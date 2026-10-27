@@ -65,7 +65,12 @@ polaris:
   reconcile:
     worker-enabled: true
     worker-id: ${POLARIS_RECONCILE_WORKER_ID:${HOSTNAME:local}-${random.uuid}}
+    worker-concurrency: ${POLARIS_RECONCILE_WORKER_CONCURRENCY:1}
+
     poll-interval: 1s
     claim-batch-size: 1
     lease-duration: 2m
+
+    recovery-interval: 5s
     recovery-batch-size: 100
+    shutdown-timeout: 60s
