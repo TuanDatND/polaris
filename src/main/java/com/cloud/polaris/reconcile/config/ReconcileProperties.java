@@ -11,7 +11,6 @@ import org.springframework.validation.annotation.Validated;
 @ConfigurationProperties(prefix ="polaris.reconcile")
 public record ReconcileProperties(
         @NotBlank String workerId,
-        @Min(1) int claimBatchSize,
         Duration leaseDuration,
         @Min(1) int recoveryBatchSize,
         @Min(1) int workerConcurrency,
