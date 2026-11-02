@@ -26,6 +26,9 @@ spring:
     locations: classpath:db/migration
     baseline-on-migrate: true
 
+  lifecycle:
+    timeout-per-shutdown-phase: 75s
+
 security:
   password-strength: ${SECURITY_PASSWORD_STRENGTH:12}
 
@@ -68,7 +71,6 @@ polaris:
     worker-concurrency: ${POLARIS_RECONCILE_WORKER_CONCURRENCY:1}
 
     poll-interval: 1s
-    claim-batch-size: 1
     lease-duration: 2m
 
     recovery-interval: 5s

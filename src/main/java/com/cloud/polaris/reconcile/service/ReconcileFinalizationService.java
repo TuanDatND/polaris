@@ -108,11 +108,15 @@ public class ReconcileFinalizationService {
 
     @Transactional
     public void block(ClaimedReconcileRequest claimed, PreparedReconcile prepared, String reason) {
+
         Instance instance = instanceRepository.findByIdForUpdate(claimed.instanceId())
                 .orElseThrow(() -> new ResourceNotFoundException("Instance not found: " + claimed.instanceId()));
+
         ReconcileRequest request = reconcileRequestRepository.findByInstanceIdForUpdate(claimed.instanceId())
                 .orElseThrow(() -> new ResourceNotFoundException("Reconcile request not found: " + claimed.instanceId()));
+
         request.assertClaimToken(claimed.claimToken());
+
         if (instance.getGeneration() != prepared.generation()
                 || request.getRequestedGeneration() != prepared.generation()) {
             request.scheduleResync(Instant.now());
